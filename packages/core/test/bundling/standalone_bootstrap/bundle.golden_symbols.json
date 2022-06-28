@@ -207,9 +207,6 @@
     "name": "NATIVE"
   },
   {
-    "name": "NEW_LINE"
-  },
-  {
     "name": "NG_COMP_DEF"
   },
   {
@@ -240,7 +237,16 @@
     "name": "NG_PROV_DEF"
   },
   {
+    "name": "NG_RUNTIME_ERROR_CODE"
+  },
+  {
+    "name": "NG_RUNTIME_ERROR_MESSAGE"
+  },
+  {
     "name": "NG_TEMPLATE_SELECTOR"
+  },
+  {
+    "name": "NG_TOKEN_PATH"
   },
   {
     "name": "NOOP_CLEANUP_FN"
@@ -559,6 +565,9 @@
   },
   {
     "name": "createNodeInjector"
+  },
+  {
+    "name": "createRuntimeError"
   },
   {
     "name": "createTView"

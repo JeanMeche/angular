@@ -941,7 +941,8 @@ describe('di', () => {
       }
 
       TestBed.configureTestingModule({declarations: [DirectiveA, DirectiveB, MyComp]});
-      expect(() => TestBed.createComponent(MyComp)).toThrowError(/No provider for DirectiveB/);
+      expect(() => TestBed.createComponent(MyComp))
+          .toThrowError(/NG0201: No provider found for `DirectiveB`/);
     });
 
     it('should throw if directive is not found in ancestor tree', () => {
@@ -960,7 +961,8 @@ describe('di', () => {
       }
 
       TestBed.configureTestingModule({declarations: [DirectiveA, DirectiveB, MyComp]});
-      expect(() => TestBed.createComponent(MyComp)).toThrowError(/No provider for DirectiveB/);
+      expect(() => TestBed.createComponent(MyComp))
+          .toThrowError(/NG0201\: No provider found for `DirectiveB`/);
     });
 
     it('should not have access to the directive injector in a standalone injector from within a directive-level provider factory',
@@ -1063,7 +1065,9 @@ describe('di', () => {
       TestBed.configureTestingModule({declarations: [DirectiveA, DirectiveB, MyComp]});
       expect(() => TestBed.createComponent(MyComp))
           .toThrowError(
-              'NG0200: Circular dependency in DI detected for DirectiveA. Find more at https://angular.io/errors/NG0200');
+              'NG0200: Circular dependency detected for `DirectiveA`. ' +
+              'Path: DirectiveA -> DirectiveA. ' +
+              'Find more at https://angular.io/errors/NG0200');
     });
 
     describe('flags', () => {
@@ -1865,7 +1869,7 @@ describe('di', () => {
                TestBed.configureTestingModule({declarations: [MyComp]});
 
                expect(() => TestBed.createComponent(MyComp))
-                   .toThrowError(/No provider for ViewContainerRef/);
+                   .toThrowError(/NG0201\: No provider found for `ViewContainerRef`/);
              });
         });
 
@@ -1943,7 +1947,7 @@ describe('di', () => {
             });
 
             expect(() => TestBed.createComponent(MyComponent))
-                .toThrowError(/No provider for ChangeDetectorRef/);
+                .toThrowError(/NG0201\: No provider found for `ChangeDetectorRef`/);
           });
 
           it('should lookup module injector in case @SkipSelf is used for `ChangeDetectorRef` token and Component has no parent',
@@ -2065,7 +2069,8 @@ describe('di', () => {
 
             TestBed.configureTestingModule({declarations: [Child, Parent, MyApp]});
 
-            expect(() => TestBed.createComponent(MyApp)).toThrowError(/No provider for Bar/);
+            expect(() => TestBed.createComponent(MyApp))
+                .toThrowError(/NG0201\: No provider found for `Bar`/);
           });
 
           it('should not throw when @SkipSelf and @Optional with no accessible viewProvider',
@@ -2105,7 +2110,8 @@ describe('di', () => {
 
                TestBed.configureTestingModule({declarations: [Child, Parent, MyApp]});
 
-               expect(() => TestBed.createComponent(MyApp)).not.toThrowError(/No provider for Bar/);
+               expect(() => TestBed.createComponent(MyApp))
+                   .not.toThrowError(/NG0201\: No provider found for `Bar`/);
              });
         });
       });
@@ -4470,7 +4476,8 @@ describe('di', () => {
     }
 
     TestBed.configureTestingModule({declarations: [App]});
-    expect(() => TestBed.createComponent(App)).toThrowError(/NullInjectorError/);
+    expect(() => TestBed.createComponent(App))
+        .toThrowError(/NG0201\: No provider found for `ViewRef`/);
   });
 
   describe('injector when creating embedded view', () => {
@@ -5335,5 +5342,148 @@ describe('di', () => {
         createInjector(ModuleWithProvider, null, [{provide: token, useValue: 'additional'}]);
 
     expect(injector.get(token)).toBe('module');
+  });
+
+  describe('cyclic dependency detector', () => {
+    it('should detect cyclic dependency in Module/Environment injector when @Inject is used',
+       () => {
+         const A = new InjectionToken('A');
+         const B = new InjectionToken('B');
+         @Injectable()
+         class ServiceB {
+           constructor(@Inject(A) svc: any) {}
+         }
+
+         @Injectable()
+         class ServiceA {
+           constructor(@Inject(B) svc: any) {}
+         }
+
+         @Component({
+           selector: 'my-comp',
+           template: '...',
+         })
+         class MyComp {
+           constructor(@Inject(A) svc: any) {}
+         }
+
+         TestBed.configureTestingModule({
+           declarations: [MyComp],
+           providers: [
+             {provide: A, useClass: ServiceA},
+             {provide: B, useClass: ServiceB},
+           ],
+         });
+
+         expect(() => TestBed.createComponent(MyComp))
+             .toThrowError(
+                 'NG0200: Circular dependency detected for `InjectionToken A`. ' +
+                 'Source: DynamicTestModule. ' +
+                 'Path: InjectionToken A -> InjectionToken B -> InjectionToken A. ' +
+                 'Find more at https://angular.io/errors/NG0200');
+       });
+
+    it('should detect cyclic dependency in Module/Environment injector when `inject` is used',
+       () => {
+         const A = new InjectionToken('A');
+         const B = new InjectionToken('B');
+         @Injectable()
+         class ServiceB {
+           a = inject(A);
+         }
+
+         @Injectable()
+         class ServiceA {
+           b = inject(B);
+         }
+
+         @Component({
+           selector: 'my-comp',
+           template: '...',
+         })
+         class MyComp {
+           a = inject(A);
+         }
+
+         TestBed.configureTestingModule({
+           declarations: [MyComp],
+           providers: [
+             {provide: A, useClass: ServiceA},
+             {provide: B, useClass: ServiceB},
+           ],
+         });
+
+         expect(() => TestBed.createComponent(MyComp))
+             .toThrowError(
+                 'NG0200: Circular dependency detected for `InjectionToken A`. ' +
+                 'Source: DynamicTestModule. ' +
+                 'Path: InjectionToken A -> InjectionToken B -> InjectionToken A. ' +
+                 'Find more at https://angular.io/errors/NG0200');
+       });
+
+    it('should detect cyclic dependency in Module/Environment injector when `Injector.get` is used',
+       () => {
+         const A = new InjectionToken('A');
+         const B = new InjectionToken('B');
+         @Injectable()
+         class ServiceB {
+           a = inject(A);
+         }
+
+         @Injectable()
+         class ServiceA {
+           b = inject(B);
+         }
+
+         @Component({
+           selector: 'my-comp',
+           template: '...',
+         })
+         class MyComp {
+           constructor(private injector: Injector) {}
+
+           readTokenA() {
+             this.injector.get(A);
+           }
+         }
+
+         TestBed.configureTestingModule({
+           declarations: [MyComp],
+           providers: [
+             {provide: A, useClass: ServiceA},
+             {provide: B, useClass: ServiceB},
+           ],
+         });
+
+         const fixture = TestBed.createComponent(MyComp);
+         fixture.detectChanges();
+
+         expect(() => fixture.componentInstance.readTokenA())
+             .toThrowError(
+                 'NG0200: Circular dependency detected for `InjectionToken A`. ' +
+                 'Source: DynamicTestModule. ' +
+                 'Path: InjectionToken A -> InjectionToken B -> InjectionToken A. ' +
+                 'Find more at https://angular.io/errors/NG0200');
+       });
+
+    it('throws an error on circular module dependencies', () => {
+      @NgModule({
+        imports: [forwardRef(() => BModule)],
+      })
+      class AModule {
+      }
+
+      @NgModule({
+        imports: [AModule],
+      })
+      class BModule {
+      }
+
+      expect(() => createInjector(AModule))
+          .toThrowError(
+              'NG0200: Circular dependency detected for `AModule`. ' +
+              'Path: AModule -> BModule -> AModule. ' +
+              'Find more at https://angular.io/errors/NG0200');
+    });
   });
 });

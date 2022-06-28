@@ -917,7 +917,7 @@ describe('host directives', () => {
 
          TestBed.configureTestingModule({declarations: [App, Host]});
          expect(() => TestBed.createComponent(App))
-             .toThrowError(/NG0200: Circular dependency in DI detected for HostDir/);
+             .toThrowError(/NG0200: Circular dependency detected for `HostDir`/);
        });
 
     it('should inject a valid ChangeDetectorRef when attached to a component', () => {

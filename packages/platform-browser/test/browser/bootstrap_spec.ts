@@ -520,8 +520,13 @@ function bootstrap(
       }
 
       await expectAsync(bootstrap(RootCmp, [{provide: ErrorHandler, useValue: errorHandler}], [], [
-        CustomModule
-      ])).toBeRejected();
+                          CustomModule
+                        ]).then(null, (e: Error) => {
+        const errorMsg = `NG0201: No provider found for \`IDontExist\`. ` +
+            `Source: TestModule. Find more at https://angular.io/errors/NG0201`;
+        expect(e.message).toContain(errorMsg);
+        return null;
+      }));
     });
 
     if (getDOM().supportsDOMEvents) {

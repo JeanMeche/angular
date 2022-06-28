@@ -19,7 +19,7 @@ import {noSideEffects} from '../util/closure';
 
 import {assertDirectiveDef, assertNodeInjector, assertTNodeForLView} from './assert';
 import {getFactoryDef} from './definition_factory';
-import {throwCyclicDependencyError, throwProviderNotFoundError} from './errors_di';
+import {cyclicDependencyErrorWithDetails, throwProviderNotFoundError} from './errors_di';
 import {NG_ELEMENT_ID, NG_FACTORY_DEF} from './fields';
 import {registerPreOrderHooks} from './hooks';
 import {DirectiveDef} from './interfaces/definition';
@@ -601,6 +601,11 @@ export function locateDirectiveOrProvider<T>(
 }
 
 /**
+ * Used in ngDevMode to keep the injection path in case of cycles in DI.
+ */
+let injectionPath: Array<string> = [];
+
+/**
  * Retrieve or instantiate the injectable from the `LView` at particular `index`.
  *
  * This function checks to see if the value has already been instantiated and if so returns the
@@ -613,8 +618,9 @@ export function getNodeInjectable(
   const tData = tView.data;
   if (isFactory(value)) {
     const factory: NodeInjectorFactory = value;
+    ngDevMode && injectionPath.push(factory.factory.name.slice(0, -8));
     if (factory.resolving) {
-      throwCyclicDependencyError(stringifyForError(tData[index]));
+      throw cyclicDependencyErrorWithDetails(stringifyForError(tData[index]), injectionPath);
     }
     const previousIncludeViewProviders = setIncludeViewProviders(factory.canSeeViewProviders);
     factory.resolving = true;
@@ -643,6 +649,7 @@ export function getNodeInjectable(
       setIncludeViewProviders(previousIncludeViewProviders);
       factory.resolving = false;
       leaveDI();
+      ngDevMode && (injectionPath = []);
     }
   }
   return value;

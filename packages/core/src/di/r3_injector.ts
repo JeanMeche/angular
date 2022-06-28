@@ -12,7 +12,7 @@ import {RuntimeError, RuntimeErrorCode} from '../errors';
 import {OnDestroy} from '../interface/lifecycle_hooks';
 import {Type} from '../interface/type';
 import {FactoryFn, getFactoryDef} from '../render3/definition_factory';
-import {throwCyclicDependencyError, throwInvalidProviderError, throwMixedMultiProviderError} from '../render3/errors_di';
+import {augmentRuntimeError, cyclicDependencyError, getRuntimeErrorCode, prependTokenToDependencyPath, throwInvalidProviderError, throwMixedMultiProviderError} from '../render3/errors_di';
 import {NG_ENV_ID} from '../render3/fields';
 import {newArray} from '../util/array_utils';
 import {EMPTY_ARRAY} from '../util/empty';
@@ -23,7 +23,7 @@ import {ENVIRONMENT_INITIALIZER} from './initializer_token';
 import {setInjectImplementation} from './inject_switch';
 import {InjectionToken} from './injection_token';
 import {Injector} from './injector';
-import {catchInjectorError, convertToBitFlags, injectArgs, NG_TEMP_TOKEN_PATH, setCurrentInjector, THROW_IF_NOT_FOUND, ɵɵinject} from './injector_compatibility';
+import {convertToBitFlags, injectArgs, setCurrentInjector, THROW_IF_NOT_FOUND, ɵɵinject} from './injector_compatibility';
 import {INJECTOR} from './injector_token';
 import {getInheritedInjectableDef, getInjectableDef, InjectorType, ɵɵInjectableDeclaration} from './interface/defs';
 import {InjectFlags, InjectOptions} from './interface/injector';
@@ -280,19 +280,31 @@ export class R3Injector extends EnvironmentInjector {
           null :
           notFoundValue;
       return nextInjector.get(token, notFoundValue);
-    } catch (e: any) {
-      if (e.name === 'NullInjectorError') {
-        const path: any[] = e[NG_TEMP_TOKEN_PATH] = e[NG_TEMP_TOKEN_PATH] || [];
-        path.unshift(stringify(token));
+    } catch (error: any) {
+      // If there was a cyclic dependency error or a token was not found,
+      // an error is thrown at the level where the problem was detected.
+      // The error propagates up the call stack and the code below appends
+      // the current token into the path. As a result, the full path is assembled
+      // at the very top of the call stack, so the final error message can be
+      // formatted to include that path.
+      const errorCode = getRuntimeErrorCode(error);
+      if ((errorCode === RuntimeErrorCode.CYCLIC_DI_DEPENDENCY ||
+           errorCode === RuntimeErrorCode.PROVIDER_NOT_FOUND)) {
+        if (!ngDevMode) {
+          throw new RuntimeError(errorCode, null);
+        }
+
+        prependTokenToDependencyPath(error, token);
+
         if (previousInjector) {
           // We still have a parent injector, keep throwing
-          throw e;
+          throw error;
         } else {
           // Format & throw the final error message when we don't have any previous injector
-          return catchInjectorError(e, token, 'R3InjectorError', this.source);
+          throw augmentRuntimeError(error, this.source);
         }
       } else {
-        throw e;
+        throw error;
       }
     } finally {
       // Lastly, restore the previous injection context.
@@ -381,7 +393,7 @@ export class R3Injector extends EnvironmentInjector {
 
   private hydrate<T>(token: ProviderToken<T>, record: Record<T>): T {
     if (ngDevMode && record.value === CIRCULAR) {
-      throwCyclicDependencyError(stringify(token));
+      throw cyclicDependencyError(stringify(token));
     } else if (record.value === NOT_YET) {
       record.value = CIRCULAR;
       record.value = record.factory!();
