@@ -19,40 +19,38 @@ import {
   Provider,
   Self,
   SimpleChanges,
-  ɵWritable as Writable,
 } from '@angular/core';
 
-import {FormGroup} from '../../model/form_group';
+import {FormArray} from '../../model/form_array';
 import {NG_ASYNC_VALIDATORS, NG_VALIDATORS} from '../../validators';
 import {ControlContainer} from '../control_container';
 import {CALL_SET_DISABLED_STATE, SetDisabledStateOption, syncPendingControls} from '../shared';
 import {AsyncValidator, AsyncValidatorFn, Validator, ValidatorFn} from '../validators';
 
 import {AbstractFormDirective} from './abstract_form.directive';
-import {FormSubmittedEvent} from '../../forms';
 
 const formDirectiveProvider: Provider = {
   provide: ControlContainer,
-  useExisting: forwardRef(() => FormGroupDirective),
+  useExisting: forwardRef(() => FormArrayDirective),
 };
 
 /**
  * @description
  *
- * Binds an existing `FormGroup` or `FormRecord` to a DOM element.
+ * Binds an existing `FormArray` to a DOM element.
  *
- * This directive accepts an existing `FormGroup` instance. It will then use this
- * `FormGroup` instance to match any child `FormControl`, `FormGroup`/`FormRecord`,
+ * This directive accepts an existing `FormArray` instance. It will then use this
+ * `FormArray` instance to match any child `FormControl`, `FormGroup`/`FormRecord`,
  * and `FormArray` instances to child `FormControlName`, `FormGroupName`,
  * and `FormArrayName` directives.
  *
- * @see [Reactive Forms Guide](guide/forms/reactive-forms)
- * @see {@link AbstractControl}
+ * @see [Reactive Forms Guide](guide/reactive-forms)
+ * @see `AbstractControl`
  *
  * @usageNotes
  * ### Register Form Group
  *
- * The following example registers a `FormGroup` with first name and last name controls,
+ * The following example registers a `FormArray` with first name and last name controls,
  * and listens for the *ngSubmit* event when the button is clicked.
  *
  * {@example forms/ts/simpleFormGroup/simple_form_group_example.ts region='Component'}
@@ -61,17 +59,17 @@ const formDirectiveProvider: Provider = {
  * @publicApi
  */
 @Directive({
-  selector: '[formGroup]',
+  selector: '[formArray]',
   providers: [formDirectiveProvider],
   host: {'(submit)': 'onSubmit($event)', '(reset)': 'onReset()'},
   exportAs: 'ngForm',
 })
-export class FormGroupDirective
-  extends AbstractFormDirective<FormGroup>
+export class FormArrayDirective
+  extends AbstractFormDirective<FormArray>
   implements OnChanges, OnDestroy
 {
   /**
-   * Callback that should be invoked when controls in FormGroup or FormArray collection change
+   * Callback that should be invoked when controls in FormArray or FormArray collection change
    * (added or removed). This callback triggers corresponding DOM updates.
    *
    * @internal
@@ -80,9 +78,9 @@ export class FormGroupDirective
 
   /**
    * @description
-   * Tracks the `FormGroup` bound to this directive.
+   * Tracks the `FormArray` bound to this directive.
    */
-  @Input('formGroup') override form: FormGroup = null!;
+  @Input('formArray') override form: FormArray = null!;
 
   /**
    * @description
@@ -119,11 +117,9 @@ export class FormGroupDirective
    * @param $event The "submit" event object
    */
   onSubmit($event: Event): boolean {
-    (this as Writable<this>).submitted = true;
+    (this as {submitted: boolean}).submitted = true;
     syncPendingControls(this.form, this.directives);
     this.ngSubmit.emit($event);
-    this.form._events.next(new FormSubmittedEvent(this.control));
-
     // Forms with `method="dialog"` have some special behavior that won't reload the page and that
     // shouldn't be prevented. Note that we need to null check the `event` and the `target`, because
     // some internal apps call this method directly with the wrong arguments.
