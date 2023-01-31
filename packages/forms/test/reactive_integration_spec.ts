@@ -25,6 +25,7 @@ import {
   COMPOSITION_BUFFER_MODE,
   ControlValueAccessor,
   FormArray,
+  FormArrayDirective,
   FormBuilder,
   FormControl,
   FormControlDirective,
@@ -37,6 +38,7 @@ import {
   NG_ASYNC_VALIDATORS,
   NG_VALIDATORS,
   NG_VALUE_ACCESSOR,
+  NgForm,
   ReactiveFormsModule,
   Validator,
   Validators,
@@ -3924,7 +3926,11 @@ describe('reactive forms integration tests', () => {
 
       const fixture = initTest(FormGroupComp);
       expect(() => fixture.detectChanges()).toThrowMatching((e: Error) => {
-        if (!e.message.includes(`formControlName must be used with a parent formGroup directive`)) {
+        if (
+          !e.message.includes(
+            `formControlName must be used with a parent formGroup or formArray directive`,
+          )
+        ) {
           return false;
         }
 
@@ -3947,7 +3953,11 @@ describe('reactive forms integration tests', () => {
 
       const fixture = initTest(FormGroupComp);
       expect(() => fixture.detectChanges()).toThrowMatching((e: Error) => {
-        if (!e.message.includes(`formControlName must be used with a parent formGroup directive`)) {
+        if (
+          !e.message.includes(
+            `formControlName must be used with a parent formGroup or formArray directive`,
+          )
+        ) {
           return false;
         }
 
@@ -3970,7 +3980,11 @@ describe('reactive forms integration tests', () => {
 
       const fixture = initTest(FormGroupComp);
       expect(() => fixture.detectChanges()).toThrowMatching((e: Error) => {
-        if (!e.message.includes(`formControlName must be used with a parent formGroup directive`)) {
+        if (
+          !e.message.includes(
+            `formControlName must be used with a parent formGroup or formArray directive`,
+          )
+        ) {
           return false;
         }
 
@@ -3995,7 +4009,7 @@ describe('reactive forms integration tests', () => {
       const fixture = initTest(FormGroupComp);
 
       expect(() => fixture.detectChanges()).toThrowError(
-        new RegExp(`formControlName must be used with a parent formGroup directive.`),
+        new RegExp(`formControlName must be used with a parent formGroup or formArray directive.`),
       );
     });
 
@@ -5811,6 +5825,109 @@ describe('reactive forms integration tests', () => {
       expect(() => {
         fixture.destroy();
       }).not.toThrow();
+    });
+
+    describe('formArray support', () => {
+      @Component({
+        selector: 'form-array-comp',
+        template: `
+          <form #formElement [formArray]="form" (ngSubmit)="event=$event">
+            @for(_ of controls; track $index) {
+              <input type="text" [formControlName]="$index">
+            }
+          </form>`,
+      })
+      class FormArrayComp {
+        controls = [new FormControl('fish'), new FormControl('cat'), new FormControl('dog')];
+        form = new FormArray(this.controls);
+        event!: Event;
+
+        @ViewChild('formElement') formElement!: ElementRef<HTMLFormElement>;
+      }
+
+      it('basic functionality ', () => {
+        const fixture = initTest(FormArrayComp);
+        fixture.detectChanges();
+        const controls = fixture.componentInstance.controls;
+
+        // model -> view
+        const inputs = fixture.debugElement.queryAll(By.css('input'));
+        expect(inputs[1].nativeElement.value).toBe('cat');
+
+        inputs[1].nativeElement.value = 'updated value';
+        dispatchEvent(inputs[1].nativeElement, 'input');
+
+        // view -> model
+        expect(controls[1].value).toEqual('updated value');
+      });
+
+      it('should add novalidate by default to form', () => {
+        const fixture = initTest(FormArrayComp);
+        fixture.detectChanges();
+
+        const form = fixture.debugElement.query(By.css('form'));
+        expect(form.nativeElement.getAttribute('novalidate')).toEqual('');
+      });
+
+      it('should mark formArray as submitted on submit event', () => {
+        const fixture = initTest(FormArrayComp);
+        const controls = [new FormControl('fish'), new FormControl('cat'), new FormControl('dog')];
+        fixture.detectChanges();
+
+        const formGroupDir = fixture.debugElement.children[0].injector.get(FormArrayDirective);
+        expect(formGroupDir.submitted).toBe(false);
+
+        const formEl = fixture.debugElement.query(By.css('form')).nativeElement;
+        dispatchEvent(formEl, 'submit');
+
+        fixture.detectChanges();
+        expect(formGroupDir.submitted).toEqual(true);
+      });
+
+      it('should reset properly', () => {
+        const fixture = initTest(FormArrayComp);
+        fixture.detectChanges();
+
+        const control = fixture.componentInstance.controls[0];
+        const input = fixture.debugElement.query(By.css('input')).nativeElement;
+
+        input.value = 'aa';
+        dispatchEvent(input, 'input');
+        fixture.detectChanges();
+
+        dispatchEvent(input, 'blur');
+        fixture.detectChanges();
+        expect(control.dirty).withContext('Expected control to be dirty on blur.').toBe(true);
+
+        control.reset();
+
+        dispatchEvent(input, 'blur');
+        fixture.detectChanges();
+
+        expect(input.value).withContext('Expected view value to reset').toEqual('');
+        expect(control.value).withContext('Expected pending value to reset.').toBe(null);
+        expect(control.dirty).withContext('Expected pending dirty value to reset.').toBe(false);
+      });
+
+      it('should support add/removing controls', () => {
+        const fixture = initTest(FormArrayComp);
+        const controls = fixture.componentInstance.controls;
+        fixture.detectChanges();
+
+        let inputs = fixture.debugElement.queryAll(By.css('input'));
+        expect(inputs.length).toBe(3);
+
+        controls.push(new FormControl('pineapple'));
+        fixture.detectChanges();
+        inputs = fixture.debugElement.queryAll(By.css('input'));
+        expect(inputs.length).toBe(4);
+
+        controls.pop();
+        controls.pop();
+        fixture.detectChanges();
+        inputs = fixture.debugElement.queryAll(By.css('input'));
+        expect(inputs.length).toBe(2);
+      });
     });
   });
 });

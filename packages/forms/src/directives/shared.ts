@@ -368,7 +368,7 @@ export function isBuiltInAccessor(valueAccessor: ControlValueAccessor): boolean 
 }
 
 export function syncPendingControls(
-  form: FormGroup,
+  form: AbstractControl,
   directives: Set<NgControl> | NgControl[],
 ): void {
   form._syncPendingControls();
