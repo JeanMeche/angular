@@ -25,8 +25,9 @@ describe('TransferCache', () => {
   describe('withHttpTransferCache', () => {
     let isStable: BehaviorSubject<boolean>;
 
-    function makeRequestAndExpectOne(url: string, body: string): void {
-      TestBed.inject(HttpClient).get(url).subscribe();
+    function makeRequestAndExpectOne(
+        url: string, body: string, options?: {skipHttpTransferCache?: boolean}): void {
+      TestBed.inject(HttpClient).get(url, options).subscribe();
       TestBed.inject(HttpTestingController).expectOne(url).flush(body);
     }
 
@@ -123,6 +124,16 @@ describe('TransferCache', () => {
       makeRequestAndExpectNone('/test-1?foo=1');
       await expectAsync(TestBed.inject(HttpClient).get('/test-1?foo=1').toPromise())
           .toBeResolvedTo('foo');
+    });
+
+    it('should skip cache when specified', () => {
+      makeRequestAndExpectOne('/test-1?foo=1', 'foo', {skipHttpTransferCache: true});
+
+      // The previous request wasn't cached so this one can't use the cache
+      makeRequestAndExpectOne('/test-1?foo=1', 'foo');
+
+      // But this one will
+      makeRequestAndExpectNone('/test-1?foo=1');
     });
   });
 });

@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {ɵwithHttpTransferCache as withHttpTransferCache} from '@angular/common/http';
+import {HttpRequest, ɵwithHttpTransferCache} from '@angular/common/http';
 import {ENVIRONMENT_INITIALIZER, EnvironmentProviders, inject, makeEnvironmentProviders, NgZone, Provider, ɵConsole as Console, ɵformatRuntimeError as formatRuntimeError, ɵwithDomHydration as withDomHydration} from '@angular/core';
 
 import {RuntimeErrorCode} from './errors';
@@ -20,7 +20,8 @@ import {RuntimeErrorCode} from './errors';
  */
 export const enum HydrationFeatureKind {
   NoDomReuseFeature,
-  NoHttpTransferCache
+  NoHttpTransferCache,
+  HttpTransferCacheOptions,
 }
 
 /**
@@ -29,18 +30,14 @@ export const enum HydrationFeatureKind {
  * @publicApi
  * @developerPreview
  */
-export interface HydrationFeature<FeatureKind extends HydrationFeatureKind> {
-  ɵkind: FeatureKind;
-  ɵproviders: Provider[];
-}
+export type HydrationFeature<FeatureKind extends HydrationFeatureKind> = {
+  ɵkind: HydrationFeatureKind.NoDomReuseFeature|HydrationFeatureKind.NoHttpTransferCache;
+}|HydrationCacheFeature;
 
-/**
- * Helper function to create an object that represents a Hydration feature.
- */
-function hydrationFeature<FeatureKind extends HydrationFeatureKind>(
-    kind: FeatureKind, providers: Provider[] = []): HydrationFeature<FeatureKind> {
-  return {ɵkind: kind, ɵproviders: providers};
-}
+type HydrationCacheFeature = {
+  ɵkind: HydrationFeatureKind.HttpTransferCacheOptions,
+  exclude?: (req: HttpRequest<unknown>) => boolean,
+};
 
 /**
  * Disables DOM nodes reuse during hydration. Effectively makes
@@ -73,10 +70,10 @@ function hydrationFeature<FeatureKind extends HydrationFeatureKind>(
  * @publicApi
  * @developerPreview
  */
-export function withNoDomReuse(): HydrationFeature<HydrationFeatureKind.NoDomReuseFeature> {
+export function withNoDomReuse(): {ɵkind: HydrationFeatureKind.NoDomReuseFeature} {
   // This feature has no providers and acts as a flag that turns off
   // non-destructive hydration (which otherwise is turned on by default).
-  return hydrationFeature(HydrationFeatureKind.NoDomReuseFeature);
+  return {ɵkind: HydrationFeatureKind.NoDomReuseFeature};
 }
 
 /**
@@ -86,11 +83,28 @@ export function withNoDomReuse(): HydrationFeature<HydrationFeatureKind.NoDomReu
  * @publicApi
  * @developerPreview
  */
-export function withNoHttpTransferCache():
-    HydrationFeature<HydrationFeatureKind.NoHttpTransferCache> {
+export function withNoHttpTransferCache(): {ɵkind: HydrationFeatureKind.NoHttpTransferCache} {
   // This feature has no providers and acts as a flag that turns off
   // HTTP transfer cache (which otherwise is turned on by default).
-  return hydrationFeature(HydrationFeatureKind.NoHttpTransferCache);
+  return {ɵkind: HydrationFeatureKind.NoHttpTransferCache};
+}
+
+/**
+ * @param options options for the transfer cache
+ * disable: Effectively causes HTTP requests to be performed twice: once on
+ * the server and other one on the browser.
+ * exclude: Callback function to determine if the request should be cached
+ *
+ * @publicApi
+ * @developerPreview
+ */
+export function withHttpTransferCache(
+    options?: {exclude?: (req: HttpRequest<unknown>) => boolean, disable?: true}): {
+  ɵkind: HydrationFeatureKind.HttpTransferCacheOptions,
+  exclude?: (req: HttpRequest<unknown>) => boolean,
+  disable?: boolean
+} {
+  return {ɵkind: HydrationFeatureKind.HttpTransferCacheOptions, ...options};
 }
 
 /**
@@ -136,6 +150,7 @@ function provideZoneJsCompatibilityDetector(): Provider[] {
  * These functions functions will allow you to disable some of the default features:
  * * {@link withNoDomReuse} to disable DOM nodes reuse during hydration
  * * {@link withNoHttpTransferCache} to disable HTTP transfer cache
+ * * {@link withHttpTransferCache} to configure the transfer cache
  *
  *
  * @usageNotes
@@ -161,6 +176,7 @@ function provideZoneJsCompatibilityDetector(): Provider[] {
  *
  * @see {@link withNoDomReuse}
  * @see {@link withNoHttpTransferCache}
+ * @see {@link withHttpTransferCache}
  *
  * @param features Optional features to configure additional router behaviors.
  * @returns A set of providers to enable hydration.
@@ -170,20 +186,21 @@ function provideZoneJsCompatibilityDetector(): Provider[] {
  */
 export function provideClientHydration(...features: HydrationFeature<HydrationFeatureKind>[]):
     EnvironmentProviders {
-  const providers: Provider[] = [];
+  // The following is to ensure typesafty of the options
+  const hydrationCacheFeature = features.find(
+      (f): f is HydrationCacheFeature => f.ɵkind === HydrationFeatureKind.HttpTransferCacheOptions);
+
   const featuresKind = new Set<HydrationFeatureKind>();
 
-  for (const {ɵproviders, ɵkind} of features) {
+  for (const {ɵkind} of features) {
     featuresKind.add(ɵkind);
-
-    if (ɵproviders.length) {
-      providers.push(ɵproviders);
-    }
   }
+
   return makeEnvironmentProviders([
     (typeof ngDevMode !== 'undefined' && ngDevMode) ? provideZoneJsCompatibilityDetector() : [],
     (featuresKind.has(HydrationFeatureKind.NoDomReuseFeature) ? [] : withDomHydration()),
-    (featuresKind.has(HydrationFeatureKind.NoHttpTransferCache) ? [] : withHttpTransferCache()),
-    providers,
+    (featuresKind.has(HydrationFeatureKind.NoHttpTransferCache) ?
+         [] :
+         ɵwithHttpTransferCache({exclude: hydrationCacheFeature?.exclude})),
   ]);
 }
