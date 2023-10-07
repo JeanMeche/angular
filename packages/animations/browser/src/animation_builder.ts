@@ -10,7 +10,10 @@ import type {ɵAnimationRenderer as AnimationRenderer} from '@angular/animations
 import {DOCUMENT} from '@angular/common';
 import {Inject, Injectable, RendererFactory2, RendererType2, ViewEncapsulation} from '@angular/core';
 
-@Injectable()
+/**
+ * @publicApi
+ */
+@Injectable({providedIn: 'root'})
 export class BrowserAnimationBuilder extends AnimationBuilder {
   private _nextAnimationId = 0;
   private _renderer: AnimationRenderer;

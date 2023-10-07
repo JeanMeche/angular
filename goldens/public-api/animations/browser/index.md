@@ -4,8 +4,12 @@
 
 ```ts
 
+import { AnimationBuilder } from '@angular/animations';
+import { AnimationFactory } from '@angular/animations';
+import { AnimationMetadata } from '@angular/animations';
 import { AnimationPlayer } from '@angular/animations';
 import * as i0 from '@angular/core';
+import { RendererFactory2 } from '@angular/core';
 
 // @public (undocumented)
 export abstract class AnimationDriver {
@@ -26,6 +30,17 @@ export abstract class AnimationDriver {
     abstract validateAnimatableStyleProperty?: (prop: string) => boolean;
     // (undocumented)
     abstract validateStyleProperty(prop: string): boolean;
+}
+
+// @public (undocumented)
+export class BrowserAnimationBuilder extends AnimationBuilder {
+    constructor(rootRenderer: RendererFactory2, doc: Document);
+    // (undocumented)
+    build(animation: AnimationMetadata | AnimationMetadata[]): AnimationFactory;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<BrowserAnimationBuilder, never>;
+    // (undocumented)
+    static ɵprov: i0.ɵɵInjectableDeclaration<BrowserAnimationBuilder>;
 }
 
 // @public
