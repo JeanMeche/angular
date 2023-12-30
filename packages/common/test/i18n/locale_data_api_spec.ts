@@ -15,15 +15,14 @@ import {ɵregisterLocaleData, ɵunregisterLocaleData} from '@angular/core';
 
 import {
   FormatWidth,
-  FormStyle,
   getCurrencySymbol,
   getLocaleDateFormat,
   getLocaleDayNames,
   getLocaleDirection,
   getLocaleMonthNames,
   getNumberOfCurrencyDigits,
-  TranslationWidth,
 } from '../../src/i18n/locale_data_api';
+import {FormStyle, TranslationWidth} from '@angular/common/public_api';
 
 describe('locale data api', () => {
   beforeAll(() => {

@@ -7,27 +7,10 @@
  */
 
 import {CurrencyPipe, DecimalPipe, PercentPipe} from '@angular/common';
-import localeAr from '@angular/common/locales/ar';
-import localeDa from '@angular/common/locales/da';
-import localeDeAt from '@angular/common/locales/de-AT';
-import localeEn from '@angular/common/locales/en';
-import localeEsUS from '@angular/common/locales/es-US';
-import localeFr from '@angular/common/locales/fr';
-import {Component, ɵregisterLocaleData, ɵunregisterLocaleData} from '@angular/core';
+import {Component} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 
 describe('Number pipes', () => {
-  beforeAll(() => {
-    ɵregisterLocaleData(localeEn);
-    ɵregisterLocaleData(localeEsUS);
-    ɵregisterLocaleData(localeFr);
-    ɵregisterLocaleData(localeAr);
-    ɵregisterLocaleData(localeDeAt);
-    ɵregisterLocaleData(localeDa);
-  });
-
-  afterAll(() => ɵunregisterLocaleData());
-
   describe('DecimalPipe', () => {
     describe('transform', () => {
       let pipe: DecimalPipe;
@@ -160,9 +143,9 @@ describe('Number pipes', () => {
     describe('transform', () => {
       it('should return correct value for numbers', () => {
         expect(pipe.transform(123)).toEqual('$123.00');
-        expect(pipe.transform(12, 'EUR', 'code', '.1')).toEqual('EUR12.0');
-        expect(pipe.transform(5.1234, 'USD', 'code', '.0-3')).toEqual('USD5.123');
-        expect(pipe.transform(5.1234, 'USD', 'code')).toEqual('USD5.12');
+        expect(pipe.transform(12, 'EUR', 'code', '.1')).toEqual('EUR 12.0');
+        expect(pipe.transform(5.1234, 'USD', 'code', '.0-3')).toEqual('USD 5.123');
+        expect(pipe.transform(5.1234, 'USD', 'code')).toEqual('USD 5.12');
         expect(pipe.transform(5.1234, 'USD', '')).toEqual('5.12');
         expect(pipe.transform(5.1234, 'USD', 'symbol')).toEqual('$5.12');
         expect(pipe.transform(5.1234, 'CAD', 'symbol')).toEqual('CA$5.12');
@@ -175,11 +158,16 @@ describe('Number pipes', () => {
         expect(pipe.transform(123456789, 'EUR', 'symbol', '', 'de-at')).toEqual('€ 123.456.789,00');
         expect(pipe.transform(5.1234, 'EUR', '', '', 'de-at')).toEqual('5,12');
         expect(pipe.transform(5.1234, 'DKK', '', '', 'da')).toEqual('5,12');
+
+        // CLP doesn't have a subdivision, so it should not display decimals unless explicitly
+        // told so
+        expect(pipe.transform(5.1234, 'CLP', '')).toEqual('5');
+        expect(pipe.transform(5.1234, 'CLP', '', '2.0-3')).toEqual('05.123');
       });
 
       it('should use the injected default currency code if none is provided', () => {
         const clpPipe = new CurrencyPipe('en-US', 'CLP');
-        expect(clpPipe.transform(1234)).toEqual('CLP1,234');
+        expect(clpPipe.transform(1234)).toEqual('CLP 1,234');
       });
 
       it('should support any currency code name', () => {
@@ -189,6 +177,12 @@ describe('Number pipes', () => {
         );
         // currency code is USD, the pipe will format based on USD but will display "Custom name"
         expect(pipe.transform(5.1234, 'USD', 'Custom name')).toEqual('Custom name5.12');
+
+        // currency code is unknown, default formatting options will be used and will display
+        // "Custom name"
+        expect(pipe.transform(5.1234, 'unexisting_ISO_code', 'Custom name')).toEqual(
+          'Custom name5.12',
+        );
       });
 
       it('should return null for NaN', () => {

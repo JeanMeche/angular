@@ -167,7 +167,7 @@ export class DecimalPipe implements PipeTransform {
 export const DOCUMENT: InjectionToken<Document>;
 
 // @public
-export function formatCurrency(value: number, locale: string, currency: string, currencyCode?: string, digitsInfo?: string): string;
+export function formatCurrency(value: number, locale: string, display: 'code' | 'symbol' | 'symbol-narrow' | string, currencyCode?: string, digitsInfo?: string): string;
 
 // @public
 export function formatDate(value: string | number | Date, format: string, locale: string, timezone?: string): string;
@@ -895,7 +895,7 @@ export const provideImgixLoader: (path: string) => Provider[];
 // @public
 export function provideNetlifyLoader(path?: string): Provider[];
 
-// @public
+// @public @deprecated
 export function registerLocaleData(data: any, localeId?: string | any, extraData?: any): void;
 
 // @public
@@ -957,6 +957,9 @@ export class UpperCasePipe implements PipeTransform {
     // (undocumented)
     static ɵpipe: i0.ɵɵPipeDeclaration<UpperCasePipe, "uppercase", true>;
 }
+
+// @public (undocumented)
+export function useLegacyDateFormatting(): void;
 
 // @public (undocumented)
 export const VERSION: Version;

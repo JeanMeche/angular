@@ -7,22 +7,9 @@
  */
 
 import {formatCurrency, formatNumber, formatPercent} from '@angular/common';
-import localeAr from '@angular/common/locales/ar';
-import localeEn from '@angular/common/locales/en';
-import localeEsUS from '@angular/common/locales/es-US';
-import localeFr from '@angular/common/locales/fr';
-import {ɵDEFAULT_LOCALE_ID, ɵregisterLocaleData, ɵunregisterLocaleData} from '@angular/core';
+import {ɵDEFAULT_LOCALE_ID} from '@angular/core';
 
 describe('Format number', () => {
-  beforeAll(() => {
-    ɵregisterLocaleData(localeEn);
-    ɵregisterLocaleData(localeEsUS);
-    ɵregisterLocaleData(localeFr);
-    ɵregisterLocaleData(localeAr);
-  });
-
-  afterAll(() => ɵunregisterLocaleData());
-
   describe('Number', () => {
     describe('transform', () => {
       it('should return correct value for numbers', () => {
@@ -34,12 +21,13 @@ describe('Format number', () => {
         expect(formatNumber(1.1234, ɵDEFAULT_LOCALE_ID)).toEqual('1.123');
         expect(formatNumber(1.123456, ɵDEFAULT_LOCALE_ID, '.2')).toEqual('1.123');
         expect(formatNumber(1.123456, ɵDEFAULT_LOCALE_ID, '.4')).toEqual('1.1235');
+
+        expect(formatNumber(1e100, ɵDEFAULT_LOCALE_ID)).toEqual('1E100');
       });
 
       it('should throw if minFractionDigits is explicitly higher than maxFractionDigits', () => {
-        expect(() => formatNumber(1.1, ɵDEFAULT_LOCALE_ID, '3.4-2')).toThrowError(
-          /is higher than the maximum/,
-        );
+        // We don't specify the error because it depends on the runtime Implementation
+        expect(() => formatNumber(1.1, ɵDEFAULT_LOCALE_ID, '3.4-2')).toThrowError();
       });
     });
 
@@ -57,7 +45,9 @@ describe('Format number', () => {
         expect(formatPercent(1.2, ɵDEFAULT_LOCALE_ID, '.2')).toEqual('120.00%');
         expect(formatPercent(1.2, ɵDEFAULT_LOCALE_ID, '4.2')).toEqual('0,120.00%');
         expect(formatPercent(1.2, 'fr', '4.2')).toEqual('0\u202f120,00 %');
-        expect(formatPercent(1.2, 'ar', '4.2')).toEqual('0,120.00‎%‎');
+        // Intl formats the output with the locale numbering system (arabic in this case)
+        expect(formatPercent(1.2, 'ar-sa', '4.2')).toEqual('٠٬١٢٠٫٠٠٪؜');
+
         // see issue #20136
         expect(formatPercent(0.12345674, ɵDEFAULT_LOCALE_ID, '0.0-10')).toEqual('12.345674%');
         expect(formatPercent(0, ɵDEFAULT_LOCALE_ID, '0.0-10')).toEqual('0%');
@@ -73,7 +63,9 @@ describe('Format number', () => {
         expect(formatPercent(100, ɵDEFAULT_LOCALE_ID, '0.4-6')).toEqual('10,000.0000%');
         expect(formatPercent(100, ɵDEFAULT_LOCALE_ID, '0.0-10')).toEqual('10,000%');
         expect(formatPercent(1.5e2, ɵDEFAULT_LOCALE_ID)).toEqual('15,000%');
-        expect(formatPercent(1e100, ɵDEFAULT_LOCALE_ID)).toEqual('1E+102%');
+
+        // Intl doesn't use a + in the exponent format for large numbers
+        expect(formatPercent(1e100, ɵDEFAULT_LOCALE_ID)).toEqual('1E102%');
       });
     });
   });
@@ -118,16 +110,40 @@ describe('Format number', () => {
       });
 
       it('should round to the default number of digits if no digitsInfo', () => {
-        // GNF has a default number of digits of 0
-        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'GNF', 'GNF')).toEqual('GNF5');
-        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'GNF', 'GNF', '.2')).toEqual('GNF5.12');
-        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'Custom name', 'GNF')).toEqual(
-          'Custom name5',
-        );
+        // GNF and BHD are valid currencies, there is space between currency and value in en-US
+
+        // We know this test fails on Saucelabs/Android
+        // because it runs a rather old version of Chrome (m100)
+        // that doesn't support the default number of digits of 0 for GNF
+        if (!isAndroid()) {
+          // GNF has a default number of digits of 0
+          expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'GNF', 'GNF')).toEqual('GNF 5');
+          expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'GNF', 'GNF', '.2')).toEqual(
+            'GNF 5.12',
+          );
+          expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'Custom name', 'GNF')).toEqual(
+            'Custom name 5',
+          );
+        }
+
         // BHD has a default number of digits of 3
-        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'BHD', 'BHD')).toEqual('BHD5.123');
-        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'BHD', 'BHD', '.1-2')).toEqual('BHD5.12');
+        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'BHD', 'BHD')).toEqual('BHD 5.123');
+        expect(formatCurrency(5.1234, ɵDEFAULT_LOCALE_ID, 'BHD', 'BHD', '.1-2')).toEqual(
+          'BHD 5.12',
+        );
       });
     });
   });
 });
+
+// Temporary helper until test runners are up-to-date
+// TODO: remove once test runners are up-to-date
+function isAndroid() {
+  if (isNode) return false;
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (userAgent.indexOf('android') != -1) {
+    return true;
+  }
+  return false;
+}
