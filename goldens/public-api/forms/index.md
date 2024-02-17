@@ -29,6 +29,8 @@ export abstract class AbstractControl<TValue = any, TRawValue extends TValue = T
     set asyncValidator(asyncValidatorFn: AsyncValidatorFn | null);
     clearAsyncValidators(): void;
     clearValidators(): void;
+    // (undocumented)
+    readonly controlStateChanges: Observable<ControlEvent<TValue>>;
     get dirty(): boolean;
     disable(opts?: {
         onlySelf?: boolean;
