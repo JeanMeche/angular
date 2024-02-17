@@ -498,7 +498,7 @@ const getRoots = () => {
 
 export const buildDirectiveForest = (): ComponentTreeNode[] => {
   const roots = getRoots();
-  return Array.prototype.concat.apply([], Array.from(roots).map(buildDirectiveTree));
+  return Array.from(roots).map(buildDirectiveTree).flat();
 };
 
 // Based on an ElementID we return a specific component node.

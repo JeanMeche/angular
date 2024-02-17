@@ -304,7 +304,7 @@ const prepareForestForSerialization = (
     };
     serializedNodes.push(serializedNode);
 
-    if (includeResolutionPath) {
+    if (includeResolutionPath && node.nativeElement?.nodeType !== Node.COMMENT_NODE) {
       serializedNode.resolutionPath = getNodeDIResolutionPath(node);
     }
   }

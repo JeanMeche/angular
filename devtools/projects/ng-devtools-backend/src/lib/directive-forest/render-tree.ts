@@ -21,6 +21,20 @@ const extractViewTree = (
 ): ComponentTreeNode[] => {
   const directives = getDirectives(domNode);
   if (!directives.length && !(domNode instanceof Element)) {
+    if (
+      domNode.nodeType === Node.COMMENT_NODE &&
+      (domNode.parentNode as HTMLElement).tagName === 'SECTION'
+    ) {
+      console.log(domNode);
+      result.push({
+        children: [],
+        component: null,
+        directives: [],
+        element: 'section',
+        nativeElement: domNode,
+        hydration: null,
+      });
+    }
     return result;
   }
   const componentTreeNode: ComponentTreeNode = {

@@ -6,7 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {NgForOf} from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -77,16 +76,18 @@ const fib = (n: number): number => {
       <section class="main">
         <input id="toggle-all" class="toggle-all" type="checkbox" />
         <label for="toggle-all">Mark all as complete</label>
-        <ul class="todo-list">
-          @for (todo of todos | todosFilter: filterValue; track todo) {
-          <app-todo
-            appTooltip
-            [todo]="todo"
-            (delete)="onDelete($event)"
-            (update)="onChange($event)"
-          />
-          }
-        </ul>
+        @defer(on timer(10s)) {
+          <ul class="todo-list">
+            @for (todo of todos | todosFilter: filterValue; track todo) {
+              <app-todo
+                appTooltip
+                [todo]="todo"
+                (delete)="onDelete($event)"
+                (update)="onChange($event)"
+              />
+            }
+          </ul>
+        }
       </section>
       <footer class="footer">
         <span class="todo-count">
