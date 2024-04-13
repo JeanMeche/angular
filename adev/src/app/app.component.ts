@@ -7,15 +7,7 @@
  */
 
 import {DOCUMENT, isPlatformBrowser} from '@angular/common';
-import {
-  Component,
-  inject,
-  NgZone,
-  OnInit,
-  PLATFORM_ID,
-  signal,
-  WritableSignal,
-} from '@angular/core';
+import {Component, inject, OnInit, PLATFORM_ID, signal, WritableSignal} from '@angular/core';
 import {NavigationEnd, NavigationSkipped, Router, RouterLink, RouterOutlet} from '@angular/router';
 import {filter, map, skip} from 'rxjs/operators';
 import {
@@ -49,7 +41,6 @@ import {ESCAPE, SEARCH_TRIGGER_KEY} from './core/constants/keys';
 })
 export class AppComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
-  private readonly ngZone = inject(NgZone);
   private readonly router = inject(Router);
   private readonly window = inject(WINDOW);
 
@@ -106,22 +97,16 @@ export class AppComponent implements OnInit {
   }
 
   private setSearchDialogVisibilityOnKeyPress(): void {
-    this.ngZone.runOutsideAngular(() => {
-      this.window.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.key === SEARCH_TRIGGER_KEY && (event.metaKey || event.ctrlKey)) {
-          this.ngZone.run(() => {
-            event.preventDefault();
-            this.displaySearchDialog.update((display) => !display);
-          });
-        }
+    this.window.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === SEARCH_TRIGGER_KEY && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        this.displaySearchDialog.update((display) => !display);
+      }
 
-        if (event.key === ESCAPE && this.displaySearchDialog()) {
-          this.ngZone.run(() => {
-            event.preventDefault();
-            this.displaySearchDialog.set(false);
-          });
-        }
-      });
+      if (event.key === ESCAPE && this.displaySearchDialog()) {
+        event.preventDefault();
+        this.displaySearchDialog.set(false);
+      }
     });
   }
 

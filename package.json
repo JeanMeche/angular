@@ -92,6 +92,7 @@
     "@types/shelljs": "^0.8.6",
     "@types/systemjs": "6.13.5",
     "@types/yargs": "^17.0.3",
+    "@xterm/addon-fit": "^0.10.0",
     "algoliasearch": "^4.23.3",
     "angular-1.5": "npm:angular@1.5",
     "angular-1.6": "npm:angular@1.6",
