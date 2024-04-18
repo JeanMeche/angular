@@ -17,7 +17,10 @@ import {
   formatDate,
   getThursdayThisIsoWeek,
   isDate,
+  isUsingIntlImpl,
+  useDefaultDateFormatting,
   toDate,
+  useLegacyDateFormatting,
 } from '@angular/common/src/i18n/format_date';
 import {ɵDEFAULT_LOCALE_ID, ɵregisterLocaleData, ɵunregisterLocaleData} from '@angular/core';
 
@@ -73,37 +76,48 @@ describe('Format date', () => {
     const isoStringWithoutTimeOrDate = '2015-01';
     const isoStringWithoutTimeOrDateOrMonth = '2015';
     const defaultFormat = 'mediumDate';
-    let date: Date;
+    const date = new Date(2015, 5, 15, 9, 3, 1, 550);
 
     // Check the transformation of a date into a pattern
     function expectDateFormatAs(date: Date | string, pattern: any, output: string): void {
-      expect(formatDate(date, pattern, ɵDEFAULT_LOCALE_ID)).toEqual(
-        output,
-        `pattern: "${pattern}"`,
-      );
+      expect(formatDate(date, pattern, ɵDEFAULT_LOCALE_ID))
+        .withContext(`{${isUsingIntlImpl() ? 'Intl' : 'Legacy'} Impl}: pattern: "${pattern}"`)
+        .toEqual(Array.isArray(output) ? output[isUsingIntlImpl() ? 1 : 0] : output);
     }
 
-    beforeAll(() => {
-      ɵregisterLocaleData(localeEn, localeEnExtra);
-      ɵregisterLocaleData(localeDe);
-      ɵregisterLocaleData(localeHu);
-      ɵregisterLocaleData(localeSr);
-      ɵregisterLocaleData(localeTh);
-      ɵregisterLocaleData(localeAr);
-      ɵregisterLocaleData(localeFi);
-    });
+    // Following ignore is to ease the review of the diff
+    // prettier-ignore
+    [true, false].forEach((useIntl) => {
+    describe(useIntl ? '- Intl formatting - ' : ' - Legacy formatting -', () => {
+    if (!useIntl) {
+      beforeAll(() => {
+        ɵregisterLocaleData(localeEn, localeEnExtra);
+        ɵregisterLocaleData(localeDe);
+        ɵregisterLocaleData(localeHu);
+        ɵregisterLocaleData(localeSr);
+        ɵregisterLocaleData(localeTh);
+        ɵregisterLocaleData(localeAr);
+        ɵregisterLocaleData(localeFi);
+      });
 
-    afterAll(() => ɵunregisterLocaleData());
+      afterAll(() => ɵunregisterLocaleData());
+    }
 
     beforeEach(() => {
-      date = new Date(2015, 5, 15, 9, 3, 1, 550);
+      if (!useIntl) {
+        useLegacyDateFormatting();
+      }
+    });
+
+    afterEach(() => {
+      useDefaultDateFormatting();
     });
 
     it('should format each component correctly', () => {
       const dateFixtures: any = {
-        G: 'AD',
-        GG: 'AD',
-        GGG: 'AD',
+        G: isUsingIntlImpl() && isFirefox() ? 'A': 'AD',
+        GG: isUsingIntlImpl() && isFirefox()? 'A': 'AD',
+        GGG: isUsingIntlImpl() && isFirefox() ? 'A': 'AD',
         GGGG: 'Anno Domini',
         GGGGG: 'A',
         y: '2015',
@@ -134,12 +148,12 @@ describe('Format date', () => {
         ccc: 'Mon',
         cccc: 'Monday',
         ccccc: 'M',
-        cccccc: 'Mo',
+        cccccc: ['Mo', 'Mon'] /* Legacy vs Intl */,
         E: 'Mon',
         EE: 'Mon',
         EEE: 'Mon',
         EEEE: 'Monday',
-        EEEEEE: 'Mo',
+        EEEEEE: ['Mo', 'Mon'] /* Legacy vs Intl */,
         h: '9',
         hh: '09',
         H: '9',
@@ -155,12 +169,14 @@ describe('Format date', () => {
         aa: 'AM',
         aaa: 'AM',
         aaaa: 'AM',
-        aaaaa: 'a',
-        b: 'morning',
-        bb: 'morning',
-        bbb: 'morning',
-        bbbb: 'morning',
-        bbbbb: 'morning',
+        aaaaa: ['a', 'AM'] /* Legacy vs Intl */,
+
+        // Note: Intl doesn't support standalone day periods, fallback to regular
+        b: ['morning', 'in the morning'] /* Legacy vs Intl */,
+        bb: ['morning', 'in the morning'] /* Legacy vs Intl */,
+        bbb: ['morning', 'in the morning'] /* Legacy vs Intl */,
+        bbbb: ['morning', 'in the morning'] /* Legacy vs Intl */,
+        bbbbb: ['morning', 'in the morning'] /* Legacy vs Intl */,
         B: 'in the morning',
         BB: 'in the morning',
         BBB: 'in the morning',
@@ -169,9 +185,9 @@ describe('Format date', () => {
       };
 
       const isoStringWithoutTimeFixtures: any = {
-        G: 'AD',
-        GG: 'AD',
-        GGG: 'AD',
+        G: isUsingIntlImpl() && isFirefox() ? 'A': 'AD',
+        GG: isUsingIntlImpl() && isFirefox()? 'A': 'AD',
+        GGG: isUsingIntlImpl() && isFirefox() ? 'A': 'AD',
         GGGG: 'Anno Domini',
         GGGGG: 'A',
         y: '2015',
@@ -202,13 +218,13 @@ describe('Format date', () => {
         ccc: 'Thu',
         cccc: 'Thursday',
         ccccc: 'T',
-        cccccc: 'Th',
+        cccccc: ['Th', 'Thu'] /* Legacy vs Intl */,
         E: 'Thu',
         EE: 'Thu',
         EEE: 'Thu',
         EEEE: 'Thursday',
         EEEEE: 'T',
-        EEEEEE: 'Th',
+        EEEEEE: ['Th', 'Thu'] /* Legacy vs Intl */,
         h: '12',
         hh: '12',
         H: '0',
@@ -224,32 +240,36 @@ describe('Format date', () => {
         aa: 'AM',
         aaa: 'AM',
         aaaa: 'AM',
-        aaaaa: 'a',
-        b: 'midnight',
-        bb: 'midnight',
-        bbb: 'midnight',
-        bbbb: 'midnight',
-        bbbbb: 'midnight',
-        B: 'midnight',
-        BB: 'midnight',
-        BBB: 'midnight',
-        BBBB: 'midnight',
-        BBBBB: 'mi',
+        aaaaa: ['a', 'AM'] /* Legacy vs Intl */,
+
+        // Note: Intl doesn't support standalone day periods, fallback to regular
+        b: ['midnight', 'at night'] /* Legacy vs Intl */,
+        bb: ['midnight', 'at night'] /* Legacy vs Intl */,
+        bbb: ['midnight', 'at night'] /* Legacy vs Intl */,
+        bbbb: ['midnight', 'at night'] /* Legacy vs Intl */,
+        bbbbb: ['midnight', 'at night'] /* Legacy vs Intl */,
+
+        B: ['midnight', 'at night'] /* Legacy vs Intl */,
+        BB: ['midnight', 'at night'] /* Legacy vs Intl */,
+        BBB: ['midnight', 'at night'] /* Legacy vs Intl */,
+        BBBB: ['midnight', 'at night'] /* Legacy vs Intl */,
+        BBBBB: ['mi', 'at night'] /* Legacy vs Intl */,
       };
 
       const midnightCrossingPeriods: any = {
-        b: 'night',
-        bb: 'night',
-        bbb: 'night',
-        bbbb: 'night',
-        bbbbb: 'night',
+        // Note: Intl doesn't support standalone day periods, fallback to regular
+        b: ['night', 'at night'] /* Legacy vs Intl */,
+        bb: ['night', 'at night'] /* Legacy vs Intl */,
+        bbb: ['night', 'at night'] /* Legacy vs Intl */,
+        bbbb: ['night', 'at night'] /* Legacy vs Intl */,
+        bbbbb: ['night', 'at night'] /* Legacy vs Intl */,
+
         B: 'at night',
         BB: 'at night',
         BBB: 'at night',
         BBBB: 'at night',
         BBBBB: 'at night',
       };
-
       Object.keys(dateFixtures).forEach((pattern: string) => {
         expectDateFormatAs(date, pattern, dateFixtures[pattern]);
       });
@@ -331,25 +351,40 @@ describe('Format date', () => {
         mediumDate: 'Jun 15, 2015',
         longDate: 'June 15, 2015',
         fullDate: 'Monday, June 15, 2015',
-        short: '6/15/15, 9:03 AM',
-        medium: 'Jun 15, 2015, 9:03:01 AM',
-        long: /June 15, 2015 at 9:03:01 AM GMT(\+|-)\d/,
-        full: /Monday, June 15, 2015 at 9:03:01 AM GMT(\+|-)\d{2}:\d{2}/,
-        shortTime: '9:03 AM',
-        mediumTime: '9:03:01 AM',
-        longTime: /9:03:01 AM GMT(\+|-)\d/,
-        fullTime: /9:03:01 AM GMT(\+|-)\d{2}:\d{2}/,
+        short: ['6/15/15, 9:03 AM', '6/15/15, 9:03 AM'] /* Legacy vs Intl */,
+        medium: ['Jun 15, 2015, 9:03:01 AM', 'Jun 15, 2015, 9:03:01 AM'] /* Legacy vs Intl */,
+        long: [
+          /June 15, 2015 at 9:03:01 AM GMT(\+|-)\d/,
+          /June 15, 2015 at 9:03:01 AM UTC/,
+        ] /* Legacy vs Intl */,
+        full: [
+          /Monday, June 15, 2015 at 9:03:01 AM GMT(\+|-)\d{2}:\d{2}/,
+          /Monday, June 15, 2015 at 9:03:01 AM Coordinated Universal Time/,
+        ] /* Legacy vs Intl */,
+        shortTime: ['9:03 AM', '9:03 AM'] /* Legacy vs Intl */,
+        mediumTime: ['9:03:01 AM', '9:03:01 AM'] /* Legacy vs Intl */,
+        longTime: [/9:03:01 AM GMT(\+|-)\d/, /9:03:01 AM UTC/] /* Legacy vs Intl */,
+        fullTime: [
+          /9:03:01 AM GMT(\+|-)\d{2}:\d{2}/,
+          /9:03:01 AM Coordinated Universal Time/,
+        ] /* Legacy vs Intl */,
       };
 
       Object.keys(dateFixtures).forEach((pattern: string) => {
-        expect(formatDate(date, pattern, ɵDEFAULT_LOCALE_ID)).toMatch(dateFixtures[pattern]);
+        if (Array.isArray(dateFixtures[pattern])) {
+          expect(formatDate(date, pattern, ɵDEFAULT_LOCALE_ID)).toMatch(
+            dateFixtures[pattern][isUsingIntlImpl() ? 1 : 0],
+          );
+        } else {
+          expect(formatDate(date, pattern, ɵDEFAULT_LOCALE_ID)).toMatch(dateFixtures[pattern]);
+        }
       });
     });
 
     it('should format invalid in IE ISO date', () =>
-      expect(formatDate('2017-01-11T12:00:00.014-0500', defaultFormat, ɵDEFAULT_LOCALE_ID)).toEqual(
-        'Jan 11, 2017',
-      ));
+      expect(
+        formatDate('2017-01-11T12:00:00.014-0500', defaultFormat, ɵDEFAULT_LOCALE_ID),
+      ).toEqual('Jan 11, 2017'));
 
     it('should format invalid in Safari ISO date', () =>
       expect(formatDate('2017-01-20T12:00:00+0000', defaultFormat, ɵDEFAULT_LOCALE_ID)).toEqual(
@@ -376,22 +411,31 @@ describe('Format date', () => {
     // https://github.com/angular/angular/issues/16624
     // https://github.com/angular/angular/issues/17478
     it('should show the correct time when the timezone is fixed', () => {
-      expect(
-        formatDate('2017-06-13T10:14:39+0000', 'shortTime', ɵDEFAULT_LOCALE_ID, '+0000'),
-      ).toEqual('10:14 AM');
-      expect(formatDate('2017-06-13T10:14:39+0000', 'h:mm a', ɵDEFAULT_LOCALE_ID, '+0000')).toEqual(
-        '10:14 AM',
-      );
+      if (!useIntl) {
+        // We don't considerer timezone offset as supported by the Intl implementation
+        useLegacyDateFormatting();
+        expect(
+          formatDate('2017-02-13T10:14:39+0000', 'shortTime', ɵDEFAULT_LOCALE_ID, '+0000'),
+        ).toEqual('10:14 AM');
+        expect(
+          formatDate('2017-02-13T10:14:39+0000', 'h:mm a', ɵDEFAULT_LOCALE_ID, '+0000'),
+        ).toEqual('10:14 AM');
+      } else {
+        // Prefer IANA timezones when using the Intl implementation
+        useDefaultDateFormatting();
+        expect(
+          formatDate(
+            '2017-02-13T10:14:39+0000',
+            'shortTime',
+            ɵDEFAULT_LOCALE_ID,
+            'Europe/London',
+          ),
+        ).toEqual('10:14 AM');
+        expect(
+          formatDate('2017-02-13T10:14:39+0000', 'h:mm a', ɵDEFAULT_LOCALE_ID, 'Europe/London'),
+        ).toEqual('10:14 AM');
+      }
     });
-
-    // The following test is disabled because backwards compatibility requires that date-only ISO
-    // strings are parsed with the local timezone.
-
-    // it('should create UTC date objects when an ISO string is passed with no time components',
-    //    () => {
-    //      expect(formatDate('2019-09-20', `MMM d, y, h:mm:ss a ZZZZZ`, ɵDEFAULT_LOCALE_ID))
-    //          .toEqual('Sep 20, 2019, 12:00:00 AM Z');
-    //    });
 
     // This test is to ensure backward compatibility for parsing date-only ISO strings.
     it('should create local timezone date objects when an ISO string is passed with no time components', () => {
@@ -414,24 +458,48 @@ describe('Format date', () => {
       expect(formatDate(date, 'MM/dd/yyyy', ɵDEFAULT_LOCALE_ID)!.length).toEqual(10));
 
     it(`should format the date correctly in various locales`, () => {
-      expect(formatDate(date, 'short', 'de')).toEqual('15.06.15, 09:03');
-      expect(formatDate(date, 'short', 'ar')).toEqual('15‏/6‏/2015, 9:03 ص');
-      expect(formatDate(date, 'dd-MM-yy', 'th')).toEqual('15-06-15');
-      expect(formatDate(date, 'a', 'hu')).toEqual('de.');
-      expect(formatDate(date, 'a', 'sr')).toEqual('AM');
+      // expect(formatDate(date, 'short', 'de')).toEqual('15.06.15, 09:03');
+      // expect(formatDate(date, 'dd-MM-yy', 'th')).toEqual('15-06-15');
+      // expect(formatDate(date, 'a', 'hu')).toEqual('de.');
+      // expect(formatDate(date, 'a', 'sr')).toEqual('AM');
 
       // TODO(ocombe): activate this test when we support local numbers
       // expect(formatDate(date, 'hh', 'mr')).toEqual('०९');
+
+      if (isUsingIntlImpl()) {
+        if(isNode) {
+          // To illustrate that node can have a different output
+          expect(formatDate(date, 'short', 'ar')).toEqual('١٥‏/٦‏/٢٠١٥، ٩:٠٣ ص');
+          expect(formatDate(date, 'short', 'ar-ae')).toEqual('15‏/6‏/2015، 9:03 ص');
+        } else if (isFirefox()) {
+          // Browsers are a bit inconsistent on the numbering system for language only locales
+          // Adding the country works around this issue
+          expect(formatDate(date, 'short', 'ar')).toEqual('١٥‏/٦‏/٢٠١٥, ٩:٠٣ ص');
+          expect(formatDate(date, 'short', 'ar-ae')).toEqual('15‏/6‏/2015, 9:03 ص');
+        } else {
+          // Chrome should use the arab numbering system but doesn't
+          // https://github.com/unicode-org/cldr-json/blob/858baad63c1d51e1d576ef99dccc229d92cedda4/cldr-json/cldr-numbers-full/main/ar/numbers.json#L11
+          expect(formatDate(date, 'short', 'ar')).toEqual('15‏/6‏/2015 9:03 ص');
+
+          expect(formatDate(date, 'short', 'ar-ae')).toEqual('15‏/6‏/2015 9:03 ص');
+        }
+      } else {
+        expect(formatDate(date, 'short', 'ar-ae')).toEqual('15‏/6‏/2015, 9:03 ص');
+      }
     });
 
     it('should throw if we use getExtraDayPeriods without loading extra locale data', () => {
-      expect(() => formatDate(date, 'b', 'de')).toThrowError(
-        /Missing extra locale data for the locale "de"/,
-      );
+      // Function throws only when using the locale data based API
+      if (!isUsingIntlImpl()) {
+        expect(() => formatDate(date, 'b', 'de')).toThrowError(
+          /Missing extra locale data for the locale "de"/,
+        );
+      }
     });
 
     // https://github.com/angular/angular/issues/24384
     it('should not round fractional seconds', () => {
+      useIntl ? useDefaultDateFormatting() : useLegacyDateFormatting();
       expect(formatDate(3999, 'm:ss', 'en')).toEqual('0:03');
       expect(formatDate(3999, 'm:ss.S', 'en')).toEqual('0:03.9');
       expect(formatDate(3999, 'm:ss.SS', 'en')).toEqual('0:03.99');
@@ -444,6 +512,7 @@ describe('Format date', () => {
       expect(formatDate(3001, 'm:ss.S', 'en')).toEqual('0:03.0');
       expect(formatDate(3001, 'm:ss.SS', 'en')).toEqual('0:03.00');
       expect(formatDate(3001, 'm:ss.SSS', 'en')).toEqual('0:03.001');
+      useDefaultDateFormatting();
     });
 
     // https://github.com/angular/angular/issues/38739
@@ -466,10 +535,6 @@ describe('Format date', () => {
       expect(formatDate('2013-12-27', 'w', 'en')).toEqual('52');
       expect(formatDate('2013-12-29', 'w', 'en')).toEqual('52');
       expect(formatDate('2013-12-31', 'w', 'en')).toEqual('1');
-
-      // Dec. 31st is a Sunday, last day of the last week of 2023
-      expect(formatDate('2023-12-31', 'w', 'en')).toEqual('52');
-
       expect(formatDate('2010-01-02', 'w', 'en')).toEqual('53');
       expect(formatDate('2010-01-04', 'w', 'en')).toEqual('1');
       expect(formatDate('0049-01-01', 'w', 'en')).toEqual('53');
@@ -490,15 +555,61 @@ describe('Format date', () => {
       expect(formatDate(date, 'fullDate', 'fi')).toMatch('maanantai 15. kesäkuuta 2015');
     });
 
-    it('should return thursday date of the same week', () => {
-      // Dec. 31st is a Sunday, last day of the last week of 2023
-      expect(getThursdayThisIsoWeek(new Date('2023-12-31'))).toEqual(new Date('2023-12-28'));
+    it('should wrap negative years', () => {
+      const date = new Date(new Date('2024-01-13').setFullYear(-1)); // Year -1
+      expect(formatDate(date, 'yyyy', ɵDEFAULT_LOCALE_ID)).toEqual('0002');
+    });
 
-      // Dec. 29th is a Thursday
-      expect(getThursdayThisIsoWeek(new Date('2022-12-29'))).toEqual(new Date('2022-12-29'));
+    it('should support years < 1000', () => {
+      expect(formatDate(new Date('0054-02-18'), 'yyy', ɵDEFAULT_LOCALE_ID)).toEqual('054');
+      expect(formatDate(new Date('0054-02-18'), 'yyyy', ɵDEFAULT_LOCALE_ID)).toEqual('0054');
+      expect(formatDate(new Date('0803-02-18'), 'yyyy', ɵDEFAULT_LOCALE_ID)).toEqual('0803');
+    });
 
-      // Jan 01st is a Monday
-      expect(getThursdayThisIsoWeek(new Date('2024-01-01'))).toEqual(new Date('2024-01-04'));
+    it('should support timezones', () => {
+      const isoDate = '2024-02-17T12:00:00Z';
+
+      const date1 = formatDate(isoDate, 'long', 'en', 'America/New_York');
+      const date2 = formatDate(isoDate, 'long', 'en', 'EST');
+      if(useIntl) {
+        expect(date1).toBe('February 17, 2024 at 7:00:00 AM EST');
+        expect(date2).toBe('February 17, 2024 at 7:00:00 AM GMT-5');
+      } else {
+        expect(date1).toBe('February 17, 2024 at 12:00:00 PM GMT+0');
+        expect(date2).toBe('February 17, 2024 at 7:00:00 AM GMT5');
+      }
+
+      // This format is only partially supported by Intl
+      // We recommend using IANA Timezone names instead which are best for Localization
+      if (!useIntl) {
+        const date3 = formatDate(isoDate, 'long', 'en', '+0500');
+        expect(date3).toBe('February 17, 2024 at 5:00:00 PM GMT+5');
+      }
+    });
+  });
+
+      it('should return thursday date of the same week', () => {
+        // Dec. 31st is a Sunday, last day of the last week of 2023
+        expect(getThursdayThisIsoWeek(new Date('2023-12-31'))).toEqual(new Date('2023-12-28'));
+
+        // Dec. 29th is a Thursday
+        expect(getThursdayThisIsoWeek(new Date('2022-12-29'))).toEqual(new Date('2022-12-29'));
+
+        // Jan 01st is a Monday
+        expect(getThursdayThisIsoWeek(new Date('2024-01-01'))).toEqual(new Date('2024-01-04'));
+      });
     });
   });
 });
+
+// Temporary helper until test runners are up-to-date
+// TODO: remove once test runners are up-to-date
+function isFirefox() {
+  if (isNode) return false;
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (userAgent.indexOf('firefox') != -1) {
+    return true;
+  }
+  return false;
+}

@@ -33,12 +33,12 @@ registerLocaleData(localeFr);
     <p>The full date/time in french is: {{ today | date: 'full' : '' : 'fr' }}</p>
 
     <!--output '2015-06-15 05:03 PM GMT+9'-->
-    <p>The custom date is {{ today | date: 'yyyy-MM-dd HH:mm a z' : '+0900' }}</p>
+    <p>The custom date is {{ today | date: 'yyyy-MM-dd HH:mm a z' : 'asia/tokyo' }}</p>
 
     <!--output '2015-06-15 09:03 AM GMT+9'-->
     <p>
       The custom date with fixed timezone is
-      {{ fixedTimezone | date: 'yyyy-MM-dd HH:mm a z' : '+0900' }}
+      {{ fixedTimezone | date: 'yyyy-MM-dd HH:mm a z' : 'asia/tokyo	' }}
     </p>
   </div>`,
 })

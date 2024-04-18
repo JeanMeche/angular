@@ -7,8 +7,16 @@
  */
 
 import {
-  FormatWidth,
+  DateFormatter,
+  DateType,
   FormStyle,
+  TranslationType,
+  TranslationWidth,
+  ZoneWidth,
+} from './format_date_interface';
+import {getIntlNamedDate, intlDateStrGetter} from './intl_helpers';
+import {
+  FormatWidth,
   getLocaleDateFormat,
   getLocaleDateTimeFormat,
   getLocaleDayNames,
@@ -22,7 +30,6 @@ import {
   getLocaleTimeFormat,
   NumberSymbol,
   Time,
-  TranslationWidth,
 } from './locale_data_api';
 
 export const ISO8601_DATE_REGEX =
@@ -31,31 +38,6 @@ export const ISO8601_DATE_REGEX =
 const NAMED_FORMATS: {[localeId: string]: {[format: string]: string}} = {};
 const DATE_FORMATS_SPLIT =
   /((?:[^BEGHLMOSWYZabcdhmswyz']+)|(?:'(?:[^']|'')*')|(?:G{1,5}|y{1,4}|Y{1,4}|M{1,5}|L{1,5}|w{1,2}|W{1}|d{1,2}|E{1,6}|c{1,6}|a{1,5}|b{1,5}|B{1,5}|h{1,2}|H{1,2}|m{1,2}|s{1,2}|S{1,3}|z{1,4}|Z{1,5}|O{1,4}))([\s\S]*)/;
-
-enum ZoneWidth {
-  Short,
-  ShortGMT,
-  Long,
-  Extended,
-}
-
-enum DateType {
-  FullYear,
-  Month,
-  Date,
-  Hours,
-  Minutes,
-  Seconds,
-  FractionalSeconds,
-  Day,
-}
-
-enum TranslationType {
-  DayPeriods,
-  Days,
-  Months,
-  Eras,
-}
 
 /**
  * @ngModule CommonModule
@@ -85,31 +67,21 @@ export function formatDate(
   timezone?: string,
 ): string {
   let date = toDate(value);
-  const namedFormat = getNamedFormat(locale, format);
-  format = namedFormat || format;
 
-  let parts: string[] = [];
-  let match;
-  while (format) {
-    match = DATE_FORMATS_SPLIT.exec(format);
-    if (match) {
-      parts = parts.concat(match.slice(1));
-      const part = parts.pop();
-      if (!part) {
-        break;
-      }
-      format = part;
-    } else {
-      parts.push(format);
-      break;
+  if (isUsingIntlImpl()) {
+    const dateStr = getIntlNamedDate(date, locale, format, timezone);
+    if (dateStr) {
+      return dateStr;
     }
   }
 
   let dateTimezoneOffset = date.getTimezoneOffset();
   if (timezone) {
-    dateTimezoneOffset = timezoneToOffset(timezone, dateTimezoneOffset);
     date = convertTimezoneToLocal(date, timezone, true);
+    dateTimezoneOffset = timezoneToOffset(timezone, dateTimezoneOffset);
   }
+
+  const parts = splitFormatInParts(locale, format);
 
   let text = '';
   parts.forEach((value) => {
@@ -241,27 +213,27 @@ function formatDateTime(str: string, opt_values: string[]) {
 function padNumber(
   num: number,
   digits: number,
-  minusSign = '-',
+  locale = 'en',
   trim?: boolean,
   negWrap?: boolean,
 ): string {
-  let neg = '';
+  const isDisplayedAsNegative = num < 0 && !negWrap;
   if (num < 0 || (negWrap && num <= 0)) {
+    num = -num;
     if (negWrap) {
-      num = -num + 1;
-    } else {
-      num = -num;
-      neg = minusSign;
+      // Years are always positive, there is no year 0, -1 is 2 BC.
+      num++;
     }
   }
-  let strNum = String(num);
-  while (strNum.length < digits) {
-    strNum = '0' + strNum;
-  }
-  if (trim) {
-    strNum = strNum.slice(strNum.length - digits);
-  }
-  return neg + strNum;
+
+  // triming the leading digits
+  const strNum = trim ? `${num}`.slice(-digits) : `${num}`;
+
+  return Intl.NumberFormat(locale, {
+    minimumIntegerDigits: digits,
+    useGrouping: false,
+    negative: isDisplayedAsNegative,
+  } as Intl.NumberFormatOptions).format(+strNum); // Explicit coertion to number because TS requires it
 }
 
 function formatFractionalSeconds(milliseconds: number, digits: number): string {
@@ -293,8 +265,7 @@ function dateGetter(
       return formatFractionalSeconds(part, size);
     }
 
-    const localeMinus = getLocaleNumberSymbol(locale, NumberSymbol.MinusSign);
-    return padNumber(part, size, localeMinus, trim, negWrap);
+    return padNumber(part, size, locale, trim, negWrap);
   };
 }
 
@@ -319,20 +290,6 @@ function getDatePart(part: DateType, date: Date): number {
     default:
       throw new Error(`Unknown DateType value "${part}".`);
   }
-}
-
-/**
- * Returns a date formatter that transforms a date into its locale string representation
- */
-function dateStrGetter(
-  name: TranslationType,
-  width: TranslationWidth,
-  form: FormStyle = FormStyle.Format,
-  extended = false,
-): DateFormatter {
-  return function (date: Date, locale: string): string {
-    return getDateTranslation(date, locale, name, width, form, extended);
-  };
 }
 
 /**
@@ -415,24 +372,23 @@ function getDateTranslation(
 function timeZoneGetter(width: ZoneWidth): DateFormatter {
   return function (date: Date, locale: string, offset: number) {
     const zone = -1 * offset;
-    const minusSign = getLocaleNumberSymbol(locale, NumberSymbol.MinusSign);
     const hours = zone > 0 ? Math.floor(zone / 60) : Math.ceil(zone / 60);
     switch (width) {
       case ZoneWidth.Short:
         return (
           (zone >= 0 ? '+' : '') +
-          padNumber(hours, 2, minusSign) +
-          padNumber(Math.abs(zone % 60), 2, minusSign)
+          padNumber(hours, 2, locale) +
+          padNumber(Math.abs(zone % 60), 2, locale)
         );
       case ZoneWidth.ShortGMT:
-        return 'GMT' + (zone >= 0 ? '+' : '') + padNumber(hours, 1, minusSign);
+        return 'GMT' + (zone >= 0 ? '+' : '') + padNumber(hours, 1, locale);
       case ZoneWidth.Long:
         return (
           'GMT' +
           (zone >= 0 ? '+' : '') +
-          padNumber(hours, 2, minusSign) +
+          padNumber(hours, 2, locale) +
           ':' +
-          padNumber(Math.abs(zone % 60), 2, minusSign)
+          padNumber(Math.abs(zone % 60), 2, locale)
         );
       case ZoneWidth.Extended:
         if (offset === 0) {
@@ -440,9 +396,9 @@ function timeZoneGetter(width: ZoneWidth): DateFormatter {
         } else {
           return (
             (zone >= 0 ? '+' : '') +
-            padNumber(hours, 2, minusSign) +
+            padNumber(hours, 2, locale) +
             ':' +
-            padNumber(Math.abs(zone % 60), 2, minusSign)
+            padNumber(Math.abs(zone % 60), 2, locale)
           );
         }
       default:
@@ -496,7 +452,7 @@ function weekGetter(size: number, monthBased = false): DateFormatter {
       result = 1 + Math.round(diff / 6.048e8); // 6.048e8 ms per week
     }
 
-    return padNumber(result, size, getLocaleNumberSymbol(locale, NumberSymbol.MinusSign));
+    return padNumber(result, size, locale);
   };
 }
 
@@ -507,18 +463,26 @@ function weekNumberingYearGetter(size: number, trim = false): DateFormatter {
   return function (date: Date, locale: string) {
     const thisThurs = getThursdayThisIsoWeek(date);
     const weekNumberingYear = thisThurs.getFullYear();
-    return padNumber(
-      weekNumberingYear,
-      size,
-      getLocaleNumberSymbol(locale, NumberSymbol.MinusSign),
-      trim,
-    );
+    return padNumber(weekNumberingYear, size, locale, trim);
   };
 }
 
-type DateFormatter = (date: Date, locale: string, offset: number) => string;
+/**
+ * Returns a date formatter that transforms a date into its locale string representation
+ */
+function legacyCldrDateFormatter(
+  name: TranslationType,
+  width: TranslationWidth,
+  form: FormStyle = FormStyle.Format,
+  extended = false,
+): DateFormatter {
+  return function (date: Date, locale: string): string {
+    return getDateTranslation(date, locale, name, width, form, extended);
+  };
+}
 
-const DATE_FORMATS: {[format: string]: DateFormatter} = {};
+// This cache is not a constant because we want to clear it when switching the implementation (in tests for example)
+let DATE_FORMATS: {[format: string]: DateFormatter} = {};
 
 // Based on CLDR formats:
 // See complete list: http://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
@@ -727,7 +691,7 @@ function getDateFormatter(format: string): DateFormatter | null {
       );
       break;
 
-    // Extended period of the day (midnight, night, ...), standalone
+    // Extended period of the day (midnight, night, ...)
     case 'B':
     case 'BB':
     case 'BBB':
@@ -835,9 +799,6 @@ function getDateFormatter(format: string): DateFormatter | null {
 }
 
 function timezoneToOffset(timezone: string, fallback: number): number {
-  // Support: IE 11 only, Edge 13-15+
-  // IE/Edge do not "understand" colon (`:`) in timezone
-  timezone = timezone.replace(/:/g, '');
   const requestedTimezoneOffset = Date.parse('Jan 01, 1970 00:00:00 ' + timezone) / 60000;
   return isNaN(requestedTimezoneOffset) ? fallback : requestedTimezoneOffset;
 }
@@ -882,8 +843,6 @@ export function toDate(value: string | number | Date): Date {
     if (/^(\d{4}(-\d{1,2}(-\d{1,2})?)?)$/.test(value)) {
       /* For ISO Strings without time the day, month and year must be extracted from the ISO String
       before Date creation to avoid time offset and errors in the new Date.
-      If we only replace '-' with ',' in the ISO String ("2015,01,01"), and try to create a new
-      date, some browsers (e.g. IE 9) will throw an invalid Date error.
       If we leave the '-' ("2015-01-01") and try to create a new Date("2015-01-01") the timeoffset
       is applied.
       Note: ISO months are 0 for January, 1 for February, ... */
@@ -904,8 +863,9 @@ export function toDate(value: string | number | Date): Date {
     }
   }
 
-  const date = new Date(value as any);
+  const date = new Date(value);
   if (!isDate(date)) {
+    // TODO: create a runtime error
     throw new Error(`Unable to convert "${value}" into a date`);
   }
   return date;
@@ -914,8 +874,11 @@ export function toDate(value: string | number | Date): Date {
 /**
  * Converts a date in ISO8601 to a Date.
  * Used instead of `Date.parse` because of browser discrepancies.
+ *
+ * Firefox didn't support 5-digit dates until version 120
+ * https://bugzilla.mozilla.org/show_bug.cgi?id=1557650
  */
-export function isoStringToDate(match: RegExpMatchArray): Date {
+function isoStringToDate(match: RegExpMatchArray): Date {
   const date = new Date(0);
   let tzHour = 0;
   let tzMin = 0;
@@ -944,3 +907,52 @@ export function isoStringToDate(match: RegExpMatchArray): Date {
 export function isDate(value: any): value is Date {
   return value instanceof Date && !isNaN(value.valueOf());
 }
+
+function splitFormatInParts(locale: string, format: string): string[] {
+  // Intl named format are already handled at the top of formatDate()
+  // Also note that getNamedFormat relies on the locale data
+  if (!isUsingIntlImpl()) {
+    const namedFormat = getNamedFormat(locale, format);
+    format = namedFormat || format;
+  }
+
+  let parts: string[] = [];
+  let match;
+  while (format) {
+    match = DATE_FORMATS_SPLIT.exec(format);
+    if (match) {
+      parts = parts.concat(match.slice(1));
+      const part = parts.pop();
+      if (!part) {
+        break;
+      }
+      format = part;
+    } else {
+      parts.push(format);
+      break;
+    }
+  }
+  return parts;
+}
+
+/** Delegates  */
+
+/**
+ *
+ * @publicApi
+ */
+export function useLegacyDateFormatting() {
+  DATE_FORMATS = {};
+  dateStrGetter = legacyCldrDateFormatter;
+}
+
+export function useDefaultDateFormatting() {
+  DATE_FORMATS = {};
+  dateStrGetter = intlDateStrGetter;
+}
+
+export const isUsingIntlImpl = () => dateStrGetter === intlDateStrGetter;
+export const isUsingLegacylImpl = () => dateStrGetter === legacyCldrDateFormatter;
+
+// This determines the default implementation for date formatting
+let dateStrGetter = intlDateStrGetter;

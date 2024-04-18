@@ -6,7 +6,17 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {DateFormatter, FormStyle, TranslationType, TranslationWidth} from './format_date_interface';
+
 const NUMBER_FORMAT_REGEXP = /^(\d+)?\.((\d+)(-(\d+))?)?$/;
+
+const FULL = 'full';
+const MEDIUM = 'medium';
+
+const LONG = 'long';
+const SHORT = 'short';
+const NARROW = 'narrow';
+const NUMERIC = 'numeric';
 
 const NARROW_SYMBOL = 'narrowSymbol';
 const SYMBOL = 'symbol';
@@ -84,6 +94,173 @@ export function formatIntlCurrency(
     })
     .join('')
     .trim();
+}
+
+/** Dates  */
+
+export function getIntlNamedDate(
+  date: Date,
+  locale: string,
+  format: string,
+  timeZone?: string,
+): string {
+  let formatObj: Intl.DateTimeFormatOptions | undefined;
+  switch (format) {
+    // Date
+    case 'shortDate':
+      formatObj = {dateStyle: SHORT};
+      break;
+    case 'mediumDate':
+      formatObj = {dateStyle: MEDIUM};
+      break;
+    case 'longDate':
+      formatObj = {dateStyle: LONG};
+      break;
+    case 'fullDate':
+      formatObj = {dateStyle: FULL};
+      break;
+
+    // Time
+    case 'shortTime':
+      formatObj = {timeStyle: SHORT};
+      break;
+    case 'mediumTime':
+      formatObj = {timeStyle: MEDIUM};
+      break;
+    case 'longTime':
+      formatObj = {timeStyle: LONG};
+      break;
+    case 'fullTime':
+      formatObj = {timeStyle: FULL};
+      break;
+
+    // Date-Time
+    case SHORT:
+      formatObj = {dateStyle: SHORT, timeStyle: SHORT};
+      break;
+    case MEDIUM:
+      formatObj = {dateStyle: MEDIUM, timeStyle: MEDIUM};
+      break;
+    case LONG:
+      formatObj = {dateStyle: LONG, timeStyle: LONG};
+      break;
+    case FULL:
+      formatObj = {dateStyle: FULL, timeStyle: FULL};
+      break;
+  }
+
+  if (formatObj) {
+    // Intl doesn't support empty string for timeZone
+    timeZone = timeZone === '' ? undefined : timeZone;
+    return Intl.DateTimeFormat(locale, {...formatObj, timeZone}).format(date);
+  }
+  return '';
+}
+
+export function intlDateStrGetter(
+  name: TranslationType,
+  width: TranslationWidth,
+  form: FormStyle = FormStyle.Format,
+  extended = false,
+): DateFormatter {
+  return function (date: Date, locale: string): string {
+    let options: IntlDateOptions;
+    switch (name) {
+      case TranslationType.Months:
+        options = getMonth(width, form === FormStyle.Standalone);
+        break;
+      case TranslationType.Days:
+        options = getWeekDay(width, form === FormStyle.Standalone);
+        break;
+      case TranslationType.DayPeriods:
+        options = getDayPeriod(width, extended);
+        break;
+      case TranslationType.Eras:
+        options = getEra(width);
+        break;
+      default:
+        // TODO: create a runtime error
+        throw new Error(`unexpected translation type ${name}`);
+    }
+    const formatDefinition = Intl.DateTimeFormat(locale, options.options);
+    if (options.extract) {
+      return extractIntlPart(formatDefinition.formatToParts(date), options.extract);
+    } else {
+      return formatDefinition.format(date);
+    }
+  };
+}
+
+interface IntlDateOptions {
+  options: Intl.DateTimeFormatOptions;
+  extract?: Intl.DateTimeFormatPartTypes;
+}
+
+function getMonth(width: TranslationWidth, standalone: boolean): IntlDateOptions {
+  const format =
+    width === TranslationWidth.Short || width === TranslationWidth.Abbreviated
+      ? SHORT
+      : width === TranslationWidth.Wide
+        ? LONG
+        : NARROW;
+
+  return standalone
+    ? {options: {month: format, day: NUMERIC}, extract: 'month'}
+    : {options: {month: format}};
+}
+
+/**
+ * Monday, Mon, M.
+ */
+function getWeekDay(width: TranslationWidth, standalone: boolean): IntlDateOptions {
+  const format =
+    width === TranslationWidth.Narrow
+      ? NARROW
+      : width === TranslationWidth.Short || width === TranslationWidth.Abbreviated
+        ? SHORT
+        : LONG;
+
+  return standalone
+    ? {options: {weekday: format}}
+    : {
+        options: {
+          weekday: format,
+          month: LONG,
+          day: NUMERIC,
+        },
+        extract: 'weekday',
+      };
+}
+
+/** AM, PM, noon, at night ...*/
+function getDayPeriod(width: TranslationWidth, extended: boolean): IntlDateOptions {
+  const format =
+    width === TranslationWidth.Short ? SHORT : width === TranslationWidth.Wide ? LONG : NARROW;
+
+  return extended
+    ? {options: {dayPeriod: format}}
+    : {options: {hour: NUMERIC, hourCycle: 'h12'}, extract: 'dayPeriod'};
+}
+
+/**
+ * AD, BC
+ */
+function getEra(width: TranslationWidth): IntlDateOptions {
+  const format =
+    width === TranslationWidth.Narrow || width === TranslationWidth.Short
+      ? NARROW
+      : width === TranslationWidth.Abbreviated
+        ? SHORT
+        : LONG;
+
+  return {options: {era: format}, extract: 'era'};
+}
+
+function extractIntlPart(
+  parts: Intl.DateTimeFormatPart[],
+  extract: Intl.DateTimeFormatPartTypes,
+): string {
+  return parts.find((part) => part.type === extract)!.value;
 }
 
 function parseIntAutoRadix(text: string): number {

@@ -959,6 +959,9 @@ export class UpperCasePipe implements PipeTransform {
 }
 
 // @public (undocumented)
+export function useLegacyDateFormatting(): void;
+
+// @public (undocumented)
 export const VERSION: Version;
 
 // @public
