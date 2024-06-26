@@ -1,0 +1,35 @@
+{
+  "$schema": "../test_case_schema.json",
+  "cases": [
+    {
+      "description": "Optimized image...",
+      "inputFiles": ["basic_optimized_image.ts"],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "basic_optimized_image_template.js",
+              "generated": "basic_optimized_image.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ]
+    },
+    {
+      "description": "Optimized image...",
+      "inputFiles": ["optimized_image_size.ts"],
+      "expectations": [
+        {
+          "files": [
+            {
+              "expected": "optimized_image_size_template.js",
+              "generated": "optimized_image_size.js"
+            }
+          ],
+          "failureMessage": "Incorrect template"
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,7 @@
 import * as core from '../../../../core';
 import * as o from '../../../../output/output_ast';
 import * as ir from '../../ir';
+import * as ng from '../instruction';
 
 import {
   ComponentCompilationJob,
@@ -25,12 +26,24 @@ export function collectElementConsts(job: CompilationJob): void {
   // Collect all extracted attributes.
   const allElementAttributes = new Map<ir.XrefId, ElementAttributes>();
   for (const unit of job.units) {
+    // Is this a good strategy to detect if it's using the directive ??
+    const hasNgSrc = [...unit.create].some(
+      (op) => op.kind === ir.OpKind.ExtractedAttribute && op.name === 'ngSrc',
+    );
+
     for (const op of unit.create) {
       if (op.kind === ir.OpKind.ExtractedAttribute) {
         const attributes =
           allElementAttributes.get(op.target) || new ElementAttributes(job.compatibility);
         allElementAttributes.set(op.target, attributes);
-        attributes.add(op.bindingKind, op.name, op.expression, op.namespace, op.trustedValueFn);
+        attributes.add(
+          op.bindingKind,
+          op.name,
+          op.expression,
+          op.namespace,
+          op.trustedValueFn,
+          hasNgSrc,
+        );
         ir.OpList.remove<ir.CreateOp>(op);
       }
     }
@@ -113,6 +126,8 @@ class ElementAttributes {
   private propertyBindings: o.Expression[] | null = null;
 
   projectAs: string | null = null;
+  optimizedImage: {ngSrc: string; height: string | undefined; width: string | undefined} | null =
+    null;
 
   get attributes(): ReadonlyArray<o.Expression> {
     return this.byKind.get(ir.BindingKind.Attribute) ?? FLYWEIGHT_ARRAY;
@@ -156,6 +171,7 @@ class ElementAttributes {
     value: o.Expression | null,
     namespace: string | null,
     trustedValueFn: o.Expression | null,
+    hasNgSrc: boolean,
   ): void {
     // TemplateDefinitionBuilder puts duplicate attribute, class, and style values into the consts
     // array. This seems inefficient, we can probably keep just the first one or the last value
@@ -184,6 +200,24 @@ class ElementAttributes {
       // attribute. Is this sane?
     }
 
+    // TODO: Should not be order dependend for width/height/ngSrc
+    // TODO: should not remove other attributes
+    if (hasNgSrc) {
+      this.optimizedImage ??= {ngSrc: '', width: undefined, height: undefined};
+
+      if (name === 'ngSrc' || name === 'width' || name === 'height') {
+        if (
+          value === null ||
+          !(value instanceof o.LiteralExpr) ||
+          value.value == null ||
+          typeof value.value?.toString() !== 'string'
+        ) {
+          throw Error('optimizedImage attributes must have a string literal values');
+        }
+        this.optimizedImage[name] = value.value.toString();
+        return;
+      }
+    }
     const array = this.arrayFor(kind);
     array.push(...getAttributeNameLiterals(namespace, name));
     if (kind === ir.BindingKind.Attribute || kind === ir.BindingKind.StyleProperty) {
@@ -243,6 +277,7 @@ function serializeAttributes({
   classes,
   i18n,
   projectAs,
+  optimizedImage,
   styles,
   template,
 }: ElementAttributes): o.LiteralArrayExpr {
@@ -257,6 +292,20 @@ function serializeAttributes({
       literalOrArrayLiteral(parsedR3Selector),
     );
   }
+  if (optimizedImage !== null) {
+    let expr: o.Expression;
+    if (optimizedImage.width === undefined && optimizedImage.height === undefined) {
+      expr = ng.optimizedImage(o.literal(optimizedImage.ngSrc));
+    } else {
+      expr = ng.optimizedImage(
+        o.literal(optimizedImage.ngSrc),
+        o.literal(optimizedImage.width),
+        o.literal(optimizedImage.height),
+      );
+    }
+    attrArray.push(o.spreaded(expr));
+  }
+
   if (classes.length > 0) {
     attrArray.push(o.literal(core.AttributeMarker.Classes), ...classes);
   }
