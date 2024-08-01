@@ -320,6 +320,7 @@ export class CompilerFacadeImpl implements CompilerFacade {
         facade.viewProviders != null ? new WrappedNodeExpr(facade.viewProviders) : null,
       relativeContextFilePath: '',
       i18nUseExternalIds: true,
+      disableImageImports: true, // this feature is incompatible with JIT
     };
     const jitExpressionSourceMap = `ng:///${facade.name}.js`;
     return this.compileComponentFromMeta(angularCoreEnv, jitExpressionSourceMap, meta);
@@ -497,6 +498,26 @@ function convertDirectiveFacadeToMetadata(facade: R3DirectiveMetadataFacade): R3
     }
   }
 
+  const hostDirectives = facade.hostDirectives?.length
+    ? facade.hostDirectives.map((hostDirective) => {
+        return typeof hostDirective === 'function'
+          ? {
+              directive: wrapReference(hostDirective),
+              inputs: null,
+              outputs: null,
+              isForwardReference: false,
+            }
+          : {
+              directive: wrapReference(hostDirective.directive),
+              isForwardReference: false,
+              inputs: hostDirective.inputs ? parseMappingStringArray(hostDirective.inputs) : null,
+              outputs: hostDirective.outputs
+                ? parseMappingStringArray(hostDirective.outputs)
+                : null,
+            };
+      })
+    : null;
+
   return {
     ...facade,
     typeArgumentCount: 0,
@@ -512,7 +533,7 @@ function convertDirectiveFacadeToMetadata(facade: R3DirectiveMetadataFacade): R3
     providers: facade.providers != null ? new WrappedNodeExpr(facade.providers) : null,
     viewQueries: facade.viewQueries.map(convertToR3QueryMetadata),
     fullInheritance: false,
-    hostDirectives: convertHostDirectivesToMetadata(facade),
+    hostDirectives,
   };
 }
 
@@ -520,6 +541,15 @@ function convertDeclareDirectiveFacadeToMetadata(
   declaration: R3DeclareDirectiveFacade,
   typeSourceSpan: ParseSourceSpan,
 ): R3DirectiveMetadata {
+  const hostDirectives = declaration.hostDirectives?.length
+    ? declaration.hostDirectives.map((dir) => ({
+        directive: wrapReference(dir.directive),
+        isForwardReference: false,
+        inputs: dir.inputs ? getHostDirectiveBindingMapping(dir.inputs) : null,
+        outputs: dir.outputs ? getHostDirectiveBindingMapping(dir.outputs) : null,
+      }))
+    : null;
+
   return {
     name: declaration.type.name,
     type: wrapReference(declaration.type),
@@ -540,7 +570,7 @@ function convertDeclareDirectiveFacadeToMetadata(
     fullInheritance: false,
     isStandalone: declaration.isStandalone ?? false,
     isSignal: declaration.isSignal ?? false,
-    hostDirectives: convertHostDirectivesToMetadata(declaration),
+    hostDirectives,
   };
 }
 
@@ -558,28 +588,19 @@ function convertHostDeclarationToMetadata(
   };
 }
 
-function convertHostDirectivesToMetadata(
-  metadata: R3DeclareDirectiveFacade | R3DirectiveMetadataFacade,
-): R3HostDirectiveMetadata[] | null {
-  if (metadata.hostDirectives?.length) {
-    return metadata.hostDirectives.map((hostDirective) => {
-      return typeof hostDirective === 'function'
-        ? {
-            directive: wrapReference(hostDirective),
-            inputs: null,
-            outputs: null,
-            isForwardReference: false,
-          }
-        : {
-            directive: wrapReference(hostDirective.directive),
-            isForwardReference: false,
-            inputs: hostDirective.inputs ? parseMappingStringArray(hostDirective.inputs) : null,
-            outputs: hostDirective.outputs ? parseMappingStringArray(hostDirective.outputs) : null,
-          };
-    });
+/**
+ * Parses a host directive mapping where each odd array key is the name of an input/output
+ * and each even key is its public name, e.g. `['one', 'oneAlias', 'two', 'two']`.
+ */
+function getHostDirectiveBindingMapping(array: string[]) {
+  let result: {[publicName: string]: string} | null = null;
+
+  for (let i = 1; i < array.length; i += 2) {
+    result = result || {};
+    result[array[i - 1]] = array[i];
   }
 
-  return null;
+  return result;
 }
 
 function convertOpaqueValuesToExpressions(obj: {[key: string]: OpaqueValue}): {
@@ -651,6 +672,8 @@ function convertDeclareComponentFacadeToMetadata(
     declarationListEmitMode: DeclarationListEmitMode.ClosureResolved,
     relativeContextFilePath: '',
     i18nUseExternalIds: true,
+
+    disableImageImports: true, // this feature is incompatible with JIT
   };
 }
 

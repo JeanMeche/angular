@@ -444,9 +444,6 @@
     "name": "_getInsertInFrontOfRNodeWithI18n"
   },
   {
-    "name": "_global"
-  },
-  {
     "name": "_icuContainerIterate"
   },
   {
@@ -520,6 +517,9 @@
   },
   {
     "name": "bloomHasToken"
+  },
+  {
+    "name": "bootstrap"
   },
   {
     "name": "callHook"
@@ -840,6 +840,9 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isComponentDef"
   },
   {
@@ -940,9 +943,6 @@
   },
   {
     "name": "ngOnChangesSetInput"
-  },
-  {
-    "name": "ngZoneApplicationErrorHandlerFactory"
   },
   {
     "name": "nonNull"

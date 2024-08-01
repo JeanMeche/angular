@@ -32,6 +32,11 @@ const DOCS_SUB_NAVIGATION_DATA: NavigationItem[] = [
         contentPath: 'introduction/what-is-angular',
       },
       {
+        label: 'Installation',
+        path: 'installation',
+        contentPath: 'introduction/installation',
+      },
+      {
         label: 'Essentials',
         children: [
           {
@@ -1471,6 +1476,11 @@ const REFERENCE_SUB_NAVIGATION_DATA: NavigationItem[] = [
         label: 'Control Flow Syntax',
         path: 'reference/migrations/control-flow',
         contentPath: 'reference/migrations/control-flow',
+      },
+      {
+        label: 'inject() Function',
+        path: 'reference/migrations/inject-function',
+        contentPath: 'reference/migrations/inject-function',
       },
     ],
   },

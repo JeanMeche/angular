@@ -69,12 +69,25 @@ export class ImportManager
   private newImports: Map<
     ts.SourceFile,
     {
-      namespaceImports: Map<ModuleName, ts.NamespaceImport>;
-      namedImports: Map<ModuleName, ts.ImportSpecifier[]>;
-      sideEffectImports: Set<ModuleName>;
+      namespaceImports: Map<
+        ModuleName,
+        [ts.NamespaceImport, attributes: ts.ImportAttributes | undefined]
+      >;
+      namedImports: Map<
+        ModuleName,
+        [ts.ImportSpecifier[], attributes: ts.ImportAttributes | undefined]
+      >;
+      sideEffectImports: Set<[ModuleName, attributes: ts.ImportAttributes | undefined]>;
     }
   > = new Map();
 
+  /**
+   * Keeps track of imports marked for removal. The root-level key is the file from which the
+   * import should be removed, the inner map key is the name of the module from which the symbol
+   * is being imported. The value of the inner map is a set of symbol names that should be removed.
+   * Note! the inner map tracks the original names of the imported symbols, not their local aliases.
+   */
+  private removedImports: Map<ts.SourceFile, Map<ModuleName, Set<string>>> = new Map();
   private nextUniqueIndex = 0;
   private config: ImportManagerConfig;
 
@@ -84,16 +97,15 @@ export class ImportManager
     namespaceImportReuseCache: new Map(),
   };
 
-  constructor(private _config: Partial<ImportManagerConfig> = {}) {
+  constructor(config: Partial<ImportManagerConfig> = {}) {
     this.config = {
-      shouldUseSingleQuotes: () => false,
-      rewriter: null,
-      disableOriginalSourceFileReuse: false,
-      forceGenerateNamespacesForNewImports: false,
-      namespaceImportPrefix: 'i',
+      shouldUseSingleQuotes: config.shouldUseSingleQuotes ?? (() => false),
+      rewriter: config.rewriter ?? null,
+      disableOriginalSourceFileReuse: config.disableOriginalSourceFileReuse ?? false,
+      forceGenerateNamespacesForNewImports: config.forceGenerateNamespacesForNewImports ?? false,
+      namespaceImportPrefix: config.namespaceImportPrefix ?? 'i',
       generateUniqueIdentifier:
-        this._config.generateUniqueIdentifier ?? createGenerateUniqueIdentifierHelper(),
-      ...this._config,
+        config.generateUniqueIdentifier ?? createGenerateUniqueIdentifierHelper(),
     };
     this.reuseSourceFileImportsTracker = {
       generateUniqueIdentifier: this.config.generateUniqueIdentifier,
@@ -111,9 +123,10 @@ export class ImportManager
       );
     }
 
-    this._getNewImportsTrackerForFile(requestedFile).sideEffectImports.add(
+    this._getNewImportsTrackerForFile(requestedFile).sideEffectImports.add([
       moduleSpecifier as ModuleName,
-    );
+      undefined, // TODO: Add support for Import Attributes
+    ]);
   }
 
   /**
@@ -143,6 +156,14 @@ export class ImportManager
       );
     }
 
+    // Remove the newly-added import from the set of removed imports.
+    if (request.exportSymbolName !== null && !request.asTypeReference) {
+      this.removedImports
+        .get(request.requestedFile)
+        ?.get(request.exportModuleSpecifier as ModuleName)
+        ?.delete(request.exportSymbolName);
+    }
+
     // Attempt to re-use previous identical import requests.
     const previousGeneratedImportRef = attemptToReuseGeneratedImports(
       this.reuseGeneratedImportsTracker,
@@ -156,6 +177,33 @@ export class ImportManager
     const resultImportRef = this._generateNewImport(request);
     captureGeneratedImport(request, this.reuseGeneratedImportsTracker, resultImportRef);
     return createImportReference(!!request.asTypeReference, resultImportRef);
+  }
+
+  /**
+   * Marks all imported symbols with a specific name for removal.
+   * Call `addImport` to undo this operation.
+   * @param requestedFile File from which to remove the imports.
+   * @param exportSymbolName Declared name of the symbol being removed.
+   * @param moduleSpecifier Module from which the symbol is being imported.
+   */
+  removeImport(
+    requestedFile: ts.SourceFile,
+    exportSymbolName: string,
+    moduleSpecifier: string,
+  ): void {
+    let moduleMap = this.removedImports.get(requestedFile);
+    if (!moduleMap) {
+      moduleMap = new Map();
+      this.removedImports.set(requestedFile, moduleMap);
+    }
+
+    let removedSymbols = moduleMap.get(moduleSpecifier as ModuleName);
+    if (!removedSymbols) {
+      removedSymbols = new Set();
+      moduleMap.set(moduleSpecifier as ModuleName, removedSymbols);
+    }
+
+    removedSymbols.add(exportSymbolName);
   }
 
   private _generateNewImport(
@@ -191,7 +239,10 @@ export class ImportManager
           ts.factory.createIdentifier(namespaceImportName),
       );
 
-      namespaceImports.set(request.exportModuleSpecifier as ModuleName, namespaceImport);
+      namespaceImports.set(request.exportModuleSpecifier as ModuleName, [
+        namespaceImport,
+        createImportAttributes(request.attributes),
+      ]);
 
       // Capture the generated namespace import alone, to allow re-use.
       captureGeneratedImport(
@@ -208,19 +259,33 @@ export class ImportManager
 
     // Otherwise, an individual named import is requested.
     if (!namedImports.has(request.exportModuleSpecifier as ModuleName)) {
-      namedImports.set(request.exportModuleSpecifier as ModuleName, []);
+      namedImports.set(request.exportModuleSpecifier as ModuleName, [
+        [],
+        createImportAttributes(request.attributes),
+      ]);
     }
 
     const exportSymbolName = ts.factory.createIdentifier(request.exportSymbolName);
-    const fileUniqueName = this.config.generateUniqueIdentifier(
-      sourceFile,
-      request.exportSymbolName,
-    );
-    const needsAlias = fileUniqueName !== null;
-    const specifierName = needsAlias ? fileUniqueName : exportSymbolName;
+    const fileUniqueName = request.unsafeAliasOverride
+      ? null
+      : this.config.generateUniqueIdentifier(sourceFile, request.exportSymbolName);
+
+    let needsAlias: boolean;
+    let specifierName: ts.Identifier;
+
+    if (request.unsafeAliasOverride) {
+      needsAlias = true;
+      specifierName = ts.factory.createIdentifier(request.unsafeAliasOverride);
+    } else if (fileUniqueName !== null) {
+      needsAlias = true;
+      specifierName = fileUniqueName;
+    } else {
+      needsAlias = false;
+      specifierName = exportSymbolName;
+    }
 
     namedImports
-      .get(request.exportModuleSpecifier as ModuleName)!
+      .get(request.exportModuleSpecifier as ModuleName)![0]
       .push(
         ts.factory.createImportSpecifier(
           false,
@@ -245,10 +310,13 @@ export class ImportManager
     updatedImports: Map<ts.NamedImports, ts.NamedImports>;
     newImports: Map<string, ts.ImportDeclaration[]>;
     reusedOriginalAliasDeclarations: Set<AliasImportDeclaration>;
+    deletedImports: Set<ts.ImportDeclaration>;
   } {
     const affectedFiles = new Set<string>();
     const updatedImportsResult = new Map<ts.NamedImports, ts.NamedImports>();
     const newImportsResult = new Map<string, ts.ImportDeclaration[]>();
+    const deletedImports = new Set<ts.ImportDeclaration>();
+    const importDeclarationsPerFile = new Map<ts.SourceFile, ts.ImportDeclaration[]>();
 
     const addNewImport = (fileName: string, importDecl: ts.ImportDeclaration) => {
       affectedFiles.add(fileName);
@@ -261,10 +329,11 @@ export class ImportManager
 
     // Collect original source file imports that need to be updated.
     this.reuseSourceFileImportsTracker.updatedImports.forEach((expressions, importDecl) => {
+      const sourceFile = importDecl.getSourceFile();
       const namedBindings = importDecl.importClause!.namedBindings as ts.NamedImports;
-      const newNamedBindings = ts.factory.updateNamedImports(
-        namedBindings,
-        namedBindings.elements.concat(
+      const moduleName = (importDecl.moduleSpecifier as ts.StringLiteral).text as ModuleName;
+      const newElements = namedBindings.elements
+        .concat(
           expressions.map(({propertyName, fileUniqueAlias}) =>
             ts.factory.createImportSpecifier(
               false,
@@ -272,11 +341,60 @@ export class ImportManager
               fileUniqueAlias ?? propertyName,
             ),
           ),
-        ),
-      );
+        )
+        .filter((specifier) => this._canAddSpecifier(sourceFile, moduleName, specifier));
 
-      affectedFiles.add(importDecl.getSourceFile().fileName);
-      updatedImportsResult.set(namedBindings, newNamedBindings);
+      affectedFiles.add(sourceFile.fileName);
+
+      if (newElements.length === 0) {
+        deletedImports.add(importDecl);
+      } else {
+        updatedImportsResult.set(
+          namedBindings,
+          ts.factory.updateNamedImports(namedBindings, newElements),
+        );
+      }
+    });
+
+    this.removedImports.forEach((removeMap, sourceFile) => {
+      if (removeMap.size === 0) {
+        return;
+      }
+
+      let allImports = importDeclarationsPerFile.get(sourceFile);
+
+      if (!allImports) {
+        allImports = sourceFile.statements.filter(ts.isImportDeclaration);
+        importDeclarationsPerFile.set(sourceFile, allImports);
+      }
+
+      for (const node of allImports) {
+        if (
+          !node.importClause?.namedBindings ||
+          !ts.isNamedImports(node.importClause.namedBindings) ||
+          this.reuseSourceFileImportsTracker.updatedImports.has(node) ||
+          deletedImports.has(node)
+        ) {
+          continue;
+        }
+
+        const namedBindings = node.importClause.namedBindings;
+        const moduleName = (node.moduleSpecifier as ts.StringLiteral).text as ModuleName;
+        const newImports = namedBindings.elements.filter((specifier) =>
+          this._canAddSpecifier(sourceFile, moduleName, specifier),
+        );
+
+        if (newImports.length === 0) {
+          affectedFiles.add(sourceFile.fileName);
+          deletedImports.add(node);
+        } else if (newImports.length !== namedBindings.elements.length) {
+          affectedFiles.add(sourceFile.fileName);
+          updatedImportsResult.set(
+            namedBindings,
+            ts.factory.updateNamedImports(namedBindings, newImports),
+          );
+        }
+      }
     });
 
     // Collect all new imports to be added. Named imports, namespace imports or side-effects.
@@ -284,7 +402,7 @@ export class ImportManager
       const useSingleQuotes = this.config.shouldUseSingleQuotes(sourceFile);
       const fileName = sourceFile.fileName;
 
-      sideEffectImports.forEach((moduleName) => {
+      sideEffectImports.forEach(([moduleName, attributes]) => {
         addNewImport(
           fileName,
           ts.factory.createImportDeclaration(
@@ -295,11 +413,12 @@ export class ImportManager
         );
       });
 
-      namespaceImports.forEach((namespaceImport, moduleName) => {
+      namespaceImports.forEach(([namespaceImport, attributes], moduleName) => {
         const newImport = ts.factory.createImportDeclaration(
           undefined,
           ts.factory.createImportClause(false, undefined, namespaceImport),
           ts.factory.createStringLiteral(moduleName, useSingleQuotes),
+          attributes,
         );
 
         // IMPORTANT: Set the original TS node to the `ts.ImportDeclaration`. This allows
@@ -313,18 +432,25 @@ export class ImportManager
         addNewImport(fileName, newImport);
       });
 
-      namedImports.forEach((specifiers, moduleName) => {
-        const newImport = ts.factory.createImportDeclaration(
-          undefined,
-          ts.factory.createImportClause(
-            false,
-            undefined,
-            ts.factory.createNamedImports(specifiers),
-          ),
-          ts.factory.createStringLiteral(moduleName, useSingleQuotes),
+      namedImports.forEach(([specifiers, attributes], moduleName) => {
+        
+        const filteredSpecifiers = specifiers.filter((specifier) =>
+          this._canAddSpecifier(sourceFile, moduleName, specifier),
         );
 
-        addNewImport(fileName, newImport);
+        if (filteredSpecifiers.length > 0) {
+          const newImport = ts.factory.createImportDeclaration(
+            undefined,
+            ts.factory.createImportClause(
+              false,
+              undefined,
+              ts.factory.createNamedImports(filteredSpecifiers),
+            ),
+            ts.factory.createStringLiteral(moduleName, useSingleQuotes),
+          );
+
+          addNewImport(fileName, newImport);
+        }
       });
     });
 
@@ -333,6 +459,7 @@ export class ImportManager
       newImports: newImportsResult,
       updatedImports: updatedImportsResult,
       reusedOriginalAliasDeclarations: this.reuseSourceFileImportsTracker.reusedAliasDeclarations,
+      deletedImports,
     };
   }
 
@@ -377,6 +504,17 @@ export class ImportManager
     }
     return this.newImports.get(file)!;
   }
+
+  private _canAddSpecifier(
+    sourceFile: ts.SourceFile,
+    moduleSpecifier: ModuleName,
+    specifier: ts.ImportSpecifier,
+  ): boolean {
+    return !this.removedImports
+      .get(sourceFile)
+      ?.get(moduleSpecifier)
+      ?.has((specifier.propertyName || specifier.name).text);
+  }
 }
 
 /** Creates an import reference based on the given identifier, or nested access. */
@@ -389,4 +527,21 @@ function createImportReference(
   } else {
     return Array.isArray(ref) ? ts.factory.createPropertyAccessExpression(ref[0], ref[1]) : ref;
   }
+}
+
+function createImportAttributes(
+  attributesRecord: Record<string, string> | undefined | null,
+): ts.ImportAttributes | undefined {
+  if (attributesRecord == undefined) {
+    return undefined;
+  }
+
+  const attributes = Object.entries(attributesRecord).map(([type, module]) => {
+    return ts.factory.createImportAttribute(
+      ts.factory.createIdentifier(type),
+      ts.factory.createStringLiteral(module),
+    );
+  });
+
+  return ts.factory.createImportAttributes(ts.factory.createNodeArray(attributes));
 }

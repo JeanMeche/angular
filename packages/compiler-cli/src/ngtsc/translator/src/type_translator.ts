@@ -176,6 +176,7 @@ class TypeTranslatorVisitor implements o.ExpressionVisitor, o.TypeVisitor {
       exportSymbolName: ast.value.name,
       requestedFile: this.contextFile,
       asTypeReference: true,
+      attributes: ast.value.attributes,
     });
 
     const typeArguments =
@@ -218,6 +219,10 @@ class TypeTranslatorVisitor implements o.ExpressionVisitor, o.TypeVisitor {
   }
 
   visitReadKeyExpr(ast: o.ReadKeyExpr, context: Context) {
+    throw new Error('Method not implemented.');
+  }
+
+  visitSpreadedIterableExpr(ast: o.outputAst.SpreadedIterableExpr, context: any) {
     throw new Error('Method not implemented.');
   }
 

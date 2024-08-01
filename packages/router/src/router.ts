@@ -87,9 +87,11 @@ export const subsetMatchOptions: IsActiveMatchOptions = {
 /**
  * @description
  *
- * A service that provides navigation among views and URL manipulation capabilities.
+ * A service that facilitates navigation among views and URL manipulation capabilities.
+ * This service is provided in the root scope and configured with [provideRouter](api/router/provideRouter).
  *
  * @see {@link Route}
+ * @see {@link provideRouter}
  * @see [Routing and Navigation Guide](guide/routing/common-router-tasks).
  *
  * @ngModule RouterModule

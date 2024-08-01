@@ -28,7 +28,7 @@ import {IndexedComponent} from './indexer';
 import {ActivePerfRecorder, PerfCheckpoint as PerfCheckpoint, PerfEvent, PerfPhase} from './perf';
 import {TsCreateProgramDriver} from './program_driver';
 import {DeclarationNode} from './reflection';
-import {retagAllTsFiles, untagAllTsFiles} from './shims';
+import {retagAllTsFiles} from './shims';
 import {OptimizeFor} from './typecheck/api';
 
 /**

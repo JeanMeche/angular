@@ -9,6 +9,7 @@
 import {ResourceLoader} from '@angular/compiler';
 import {
   ApplicationInitStatus,
+  ɵINTERNAL_APPLICATION_ERROR_HANDLER as INTERNAL_APPLICATION_ERROR_HANDLER,
   ɵChangeDetectionScheduler as ChangeDetectionScheduler,
   ɵChangeDetectionSchedulerImpl as ChangeDetectionSchedulerImpl,
   Compiler,
@@ -16,10 +17,12 @@ import {
   Component,
   Directive,
   Injector,
+  inject,
   InjectorType,
   LOCALE_ID,
   ModuleWithComponentFactories,
   ModuleWithProviders,
+  ɵZONELESS_ENABLED as ZONELESS_ENABLED,
   NgModule,
   NgModuleFactory,
   Pipe,
@@ -35,7 +38,6 @@ import {
   ɵcompilePipe as compilePipe,
   ɵDEFAULT_LOCALE_ID as DEFAULT_LOCALE_ID,
   ɵDEFER_BLOCK_CONFIG as DEFER_BLOCK_CONFIG,
-  ɵDeferBlockBehavior as DeferBlockBehavior,
   ɵdepsTracker as depsTracker,
   ɵDirectiveDef as DirectiveDef,
   ɵgenerateStandaloneInDeclarationsError,
@@ -62,6 +64,8 @@ import {
   ɵtransitiveScopesFor as transitiveScopesFor,
   ɵUSE_RUNTIME_DEPS_TRACKER_FOR_JIT as USE_RUNTIME_DEPS_TRACKER_FOR_JIT,
   ɵɵInjectableDeclaration as InjectableDeclaration,
+  NgZone,
+  ErrorHandler,
 } from '@angular/core';
 
 import {ComponentDef, ComponentType} from '../../src/render3';
@@ -75,6 +79,10 @@ import {
   Resolver,
 } from './resolvers';
 import {DEFER_BLOCK_DEFAULT_BEHAVIOR, TestModuleMetadata} from './test_bed_common';
+import {
+  RETHROW_APPLICATION_ERRORS,
+  TestBedApplicationErrorHandler,
+} from './application_error_handler';
 
 enum TestingModuleOverride {
   DECLARATION,
@@ -218,6 +226,10 @@ export class TestBedCompiler {
     if (moduleDef.providers !== undefined) {
       this.providers.push(...moduleDef.providers);
     }
+    this.providers.push({
+      provide: RETHROW_APPLICATION_ERRORS,
+      useValue: moduleDef._rethrowApplicationTickErrors ?? false,
+    });
 
     if (moduleDef.schemas !== undefined) {
       this.schemas.push(...moduleDef.schemas);
@@ -931,6 +943,23 @@ export class TestBedCompiler {
       providers: [
         ...this.rootProviderOverrides,
         internalProvideZoneChangeDetection({}),
+        TestBedApplicationErrorHandler,
+        {
+          provide: INTERNAL_APPLICATION_ERROR_HANDLER,
+          useFactory: () => {
+            if (inject(ZONELESS_ENABLED) || inject(RETHROW_APPLICATION_ERRORS, {optional: true})) {
+              const handler = inject(TestBedApplicationErrorHandler);
+              return (e: unknown) => {
+                handler.handleError(e);
+              };
+            } else {
+              const userErrorHandler = inject(ErrorHandler);
+              const ngZone = inject(NgZone);
+              return (e: unknown) =>
+                ngZone.runOutsideAngular(() => userErrorHandler.handleError(e));
+            }
+          },
+        },
         {provide: ChangeDetectionScheduler, useExisting: ChangeDetectionSchedulerImpl},
       ],
     });

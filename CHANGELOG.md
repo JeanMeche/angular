@@ -1,3 +1,158 @@
+<a name="18.2.0-next.3"></a>
+# 18.2.0-next.3 (2024-07-31)
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [67e09404db](https://github.com/angular/angular/commit/67e09404db4a8a3a09bff005503a76f49d4fe055) | fix | reduce chance of conflicts between generated factory and local variables ([#57181](https://github.com/angular/angular/pull/57181)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [0f0a1f2836](https://github.com/angular/angular/commit/0f0a1f28365cdb2dc6abed5ec75d4f6ba7ff1578) | fix | emitting references to ngtypecheck files ([#57138](https://github.com/angular/angular/pull/57138)) |
+| [e11c0c42d2](https://github.com/angular/angular/commit/e11c0c42d2cbcdf8a5d75a4e24a6a5dbed33943e) | fix | run JIT transforms on `@NgModule` classes with `jit: true` ([#57212](https://github.com/angular/angular/pull/57212)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [3459289ef0](https://github.com/angular/angular/commit/3459289ef079a80e84bb92e20c25fb6cae18aaf8) | feat | bootstrapModule can configure NgZone in providers ([#57060](https://github.com/angular/angular/pull/57060)) |
+| [3a63c9ebbe](https://github.com/angular/angular/commit/3a63c9ebbec86ec13ba2c978dd3c497cd1f4ab46) | fix | errors during ApplicationRef.tick should be rethrown for zoneless tests ([#56993](https://github.com/angular/angular/pull/56993)) |
+| [ca89ef9141](https://github.com/angular/angular/commit/ca89ef9141191d56415bdf62354f5125800a4039) | fix | handle shorthand assignment in the inject migration ([#57134](https://github.com/angular/angular/pull/57134)) |
+| [a752178f28](https://github.com/angular/angular/commit/a752178f28b836acfc55c4dfa7cd4d18e99ca7c4) | fix | hydration error in some let declaration setups ([#57173](https://github.com/angular/angular/pull/57173)) |
+| [2a4f488a6c](https://github.com/angular/angular/commit/2a4f488a6cb8bdadece70c8aa076c02fae801688) | fix | warnings for oversized images and lazy-lcp present with bootstrapModule ([#57060](https://github.com/angular/angular/pull/57060)) |
+### migrations
+| Commit | Type | Description |
+| -- | -- | -- |
+| [147eee4253](https://github.com/angular/angular/commit/147eee42530b8e7d6a99f37c8eba7a38cbe29522) | feat | add migration to convert standalone component routes to be lazy loaded ([#56428](https://github.com/angular/angular/pull/56428)) |
+| [cb442a0ce7](https://github.com/angular/angular/commit/cb442a0ce7183c7d0e315a58ade75aa09bdaf6dd) | fix | account for parameters with union types ([#57127](https://github.com/angular/angular/pull/57127)) |
+| [166166d79e](https://github.com/angular/angular/commit/166166d79ebe2405989b869f96a04e1dee182666) | fix | add alias to inject migration ([#57127](https://github.com/angular/angular/pull/57127)) |
+| [1cf616f671](https://github.com/angular/angular/commit/1cf616f6710d1324e24bc3421a1edc84c8bb1a02) | fix | remove generic arguments from the injected type reference ([#57127](https://github.com/angular/angular/pull/57127)) |
+| [ba0df30ef6](https://github.com/angular/angular/commit/ba0df30ef617df0a8b6b7286f0147f7d1509330e) | fix | remove unused imports in inject migration ([#57179](https://github.com/angular/angular/pull/57179)) |
+| [aae9646a1b](https://github.com/angular/angular/commit/aae9646a1b5a5ce114e624d9c1452d9f4c71b969) | fix | unwrap injected forwardRef ([#57127](https://github.com/angular/angular/pull/57127)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="18.1.3"></a>
+# 18.1.3 (2024-07-31)
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [31dea066d6](https://github.com/angular/angular/commit/31dea066d636bb49fa18b1172815b1ef7af4dbe5) | fix | reduce chance of conflicts between generated factory and local variables ([#57181](https://github.com/angular/angular/pull/57181)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [1f9e090910](https://github.com/angular/angular/commit/1f9e09091076924a2f2c2d4bd6e5f65303bf8fea) | fix | emitting references to ngtypecheck files ([#57138](https://github.com/angular/angular/pull/57138)) ([#57202](https://github.com/angular/angular/pull/57202)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [f7ab04018e](https://github.com/angular/angular/commit/f7ab04018ea0fe12781de987fff40fd1dc30f3f0) | fix | errors during ApplicationRef.tick should be rethrown for zoneless tests ([#56993](https://github.com/angular/angular/pull/56993)) |
+| [eaa83f9d27](https://github.com/angular/angular/commit/eaa83f9d279855b104597d396e39fe3496470daf) | fix | hydration error in some let declaration setups ([#57173](https://github.com/angular/angular/pull/57173)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="18.2.0-next.2"></a>
+# 18.2.0-next.2 (2024-07-24)
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [08c5977bd5](https://github.com/angular/angular/commit/08c5977bd53caf7911e48f39fa4f60e5afd813de) | fix | limit the number of chained instructions ([#57069](https://github.com/angular/angular/pull/57069)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [d4ff6bc0b2](https://github.com/angular/angular/commit/d4ff6bc0b200f0a6bb095ea4a13e52b79e254cca) | fix | add warning for unused let declarations ([#57033](https://github.com/angular/angular/pull/57033)) |
+| [6c2fbda694](https://github.com/angular/angular/commit/6c2fbda6942adbc7b21f3dfc1db0a42638223a1a) | fix | extended diagnostic visitor not visiting template attributes ([#57033](https://github.com/angular/angular/pull/57033)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [fab673a1dd](https://github.com/angular/angular/commit/fab673a1ddbca19ff9734f92a5ef0cc16be5708c) | feat | add ng generate schematic to convert to inject ([#57056](https://github.com/angular/angular/pull/57056)) |
+| [7d4b2d2413](https://github.com/angular/angular/commit/7d4b2d2413935ca0869e659fc67dd88e00228593) | fix | `afterNextRender` hooks return that callback value. ([#57031](https://github.com/angular/angular/pull/57031)) |
+| [8718abce90](https://github.com/angular/angular/commit/8718abce900617275d80ca56141d4e4436481b69) | fix | Deprecate ignoreChangesOutsideZone option ([#57029](https://github.com/angular/angular/pull/57029)) |
+| [fe41b11434](https://github.com/angular/angular/commit/fe41b11434ad7bdff1c308fc31a6671e67c5ee29) | fix | tree shake dev mode error message ([#57035](https://github.com/angular/angular/pull/57035)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="18.1.2"></a>
+# 18.1.2 (2024-07-24)
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [463945003d](https://github.com/angular/angular/commit/463945003dcf253c64809ffdcddabedb87e78e06) | fix | limit the number of chained instructions ([#57069](https://github.com/angular/angular/pull/57069)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [e904f34020](https://github.com/angular/angular/commit/e904f3402053ce9098854a31f2652020dd79e8f9) | fix | add warning for unused let declarations ([#57033](https://github.com/angular/angular/pull/57033)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [9e52c1c840](https://github.com/angular/angular/commit/9e52c1c8402dd5a54cf73caafff4a5b81d73fabd) | fix | `afterNextRender` hooks return that callback value. ([#57031](https://github.com/angular/angular/pull/57031)) |
+| [b9fb98c67c](https://github.com/angular/angular/commit/b9fb98c67c29d8e5697b72788f09f1263e8130f4) | fix | tree shake dev mode error message ([#57035](https://github.com/angular/angular/pull/57035)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="18.2.0-next.1"></a>
+# 18.2.0-next.1 (2024-07-17)
+### common
+| Commit | Type | Description |
+| -- | -- | -- |
+| [2c4613a002](https://github.com/angular/angular/commit/2c4613a002d7670f8377cb53eaa9aca4bfc9521f) | fix | Don't run preconnect assertion on the server. ([#56213](https://github.com/angular/angular/pull/56213)) |
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [9167fc815c](https://github.com/angular/angular/commit/9167fc815c5bac5f39352dd13e381c5be84282c5) | fix | JIT mode incorrectly interpreting host directive configuration in partial compilation ([#57002](https://github.com/angular/angular/pull/57002)) |
+| [107173c14d](https://github.com/angular/angular/commit/107173c14d1a0d95b78fbcac53a46bce5f8a6848) | fix | use strict equality for 'code' comparison ([#56944](https://github.com/angular/angular/pull/56944)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [98ed5b609e](https://github.com/angular/angular/commit/98ed5b609e76d3d2b464abfe49d70413c54d3eee) | feat | run JIT transform on classes with `jit: true` opt-out ([#56892](https://github.com/angular/angular/pull/56892)) |
+| [f0d6d0688d](https://github.com/angular/angular/commit/f0d6d0688d984970e03d747405a9b11635ecdcf9) | fix | avoid emitting references to typecheck files in TS 5.4 ([#56961](https://github.com/angular/angular/pull/56961)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [e504ad97d4](https://github.com/angular/angular/commit/e504ad97d44159cf632ec987fce94f66bfddef37) | fix | not all callbacks running when registered at the same time ([#56981](https://github.com/angular/angular/pull/56981)) |
+### language-service
+| Commit | Type | Description |
+| -- | -- | -- |
+| [4bb558ab0c](https://github.com/angular/angular/commit/4bb558ab0cbf2e5e34816377e977128a177a977a) | feat | support writing code refactorings ([#56895](https://github.com/angular/angular/pull/56895)) |
+| [7663debce1](https://github.com/angular/angular/commit/7663debce1a8411a763a27b7cf8bc5955f8ea2ed) | perf | quick exit if no code fixes can exist ([#57000](https://github.com/angular/angular/pull/57000)) |
+### migrations
+| Commit | Type | Description |
+| -- | -- | -- |
+| [0ea6a4a361](https://github.com/angular/angular/commit/0ea6a4a36128dc7a3792f4e164f024e91f429705) | fix | fix common module removal ([#56968](https://github.com/angular/angular/pull/56968)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="18.1.1"></a>
+# 18.1.1 (2024-07-17)
+### common
+| Commit | Type | Description |
+| -- | -- | -- |
+| [a1cb9dfc0d](https://github.com/angular/angular/commit/a1cb9dfc0d3539d16020a53dd4c32311240a6265) | fix | Don't run preconnect assertion on the server. ([#56213](https://github.com/angular/angular/pull/56213)) |
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [daf0317bdc](https://github.com/angular/angular/commit/daf0317bdcef79445eead4a3e0e1be75671f43fb) | fix | JIT mode incorrectly interpreting host directive configuration in partial compilation ([#57002](https://github.com/angular/angular/pull/57002)) |
+| [d7dca6dbb6](https://github.com/angular/angular/commit/d7dca6dbb6d8afc77a988de0b7471ac4e078762e) | fix | use strict equality for 'code' comparison ([#56944](https://github.com/angular/angular/pull/56944)) |
+### compiler-cli
+| Commit | Type | Description |
+| -- | -- | -- |
+| [c94a897248](https://github.com/angular/angular/commit/c94a8972488f62656f5d0368b8763776e2cd39c6) | fix | avoid emitting references to typecheck files in TS 5.4 ([#56961](https://github.com/angular/angular/pull/56961)) |
+### core
+| Commit | Type | Description |
+| -- | -- | -- |
+| [5682527d94](https://github.com/angular/angular/commit/5682527d949b078e92ff7588c7e25dad37fffc52) | fix | not all callbacks running when registered at the same time ([#56981](https://github.com/angular/angular/pull/56981)) |
+### migrations
+| Commit | Type | Description |
+| -- | -- | -- |
+| [b666d2c20f](https://github.com/angular/angular/commit/b666d2c20f932f435fa6c51e1d74d7bca53381f2) | fix | fix common module removal ([#56968](https://github.com/angular/angular/pull/56968)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
+<a name="17.3.12"></a>
+# 17.3.12 (2024-07-17)
+### compiler
+| Commit | Type | Description |
+| -- | -- | -- |
+| [327bae473b](https://github.com/angular/angular/commit/327bae473b4ed430efefb4663312a01f59304081) | fix | JIT mode incorrectly interpreting host directive configuration in partial compilation ([#57002](https://github.com/angular/angular/pull/57002)) ([#57003](https://github.com/angular/angular/pull/57003)) |
+
+<!-- CHANGELOG SPLIT MARKER -->
+
 <a name="18.2.0-next.0"></a>
 # 18.2.0-next.0 (2024-07-10)
 ### compiler

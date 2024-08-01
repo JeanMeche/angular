@@ -272,7 +272,8 @@ class ClassExtractor {
     return (
       !member.name ||
       !this.isDocumentableMember(member) ||
-      !!member.modifiers?.some((mod) => mod.kind === ts.SyntaxKind.PrivateKeyword) ||
+      (!ts.isCallSignatureDeclaration(member) &&
+        member.modifiers?.some((mod) => mod.kind === ts.SyntaxKind.PrivateKeyword)) ||
       member.name.getText() === 'prototype' ||
       isAngularPrivateName(member.name.getText()) ||
       isInternal(member)
@@ -280,14 +281,34 @@ class ClassExtractor {
   }
 
   /** Gets whether a class member is a method, property, or accessor. */
-  private isDocumentableMember(member: ts.Node): member is MethodLike | PropertyLike {
-    return this.isMethod(member) || this.isProperty(member) || ts.isAccessor(member);
+  private isDocumentableMember(
+    member: ts.Node,
+  ): member is MethodLike | PropertyLike | ts.CallSignatureDeclaration {
+    return (
+      this.isMethod(member) ||
+      this.isProperty(member) ||
+      ts.isAccessor(member) ||
+      // Signatures are documentable if they are part of an interface.
+      ts.isCallSignatureDeclaration(member)
+    );
+  }
+
+  /** Check if the parameter is a constructor parameter with a public modifier */
+  private isPublicConstructorParameterProperty(node: ts.Node): boolean {
+    if (ts.isParameterPropertyDeclaration(node, node.parent) && node.modifiers) {
+      return node.modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.PublicKeyword);
+    }
+    return false;
   }
 
   /** Gets whether a member is a property. */
   private isProperty(member: ts.Node): member is PropertyLike {
     // Classes have declarations, interface have signatures
-    return ts.isPropertyDeclaration(member) || ts.isPropertySignature(member);
+    return (
+      ts.isPropertyDeclaration(member) ||
+      ts.isPropertySignature(member) ||
+      this.isPublicConstructorParameterProperty(member)
+    );
   }
 
   /** Gets whether a member is a method. */

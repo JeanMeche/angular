@@ -249,6 +249,7 @@ export class ComponentDecoratorHandler
     private readonly forbidOrphanRendering: boolean,
     private readonly enableBlockSyntax: boolean,
     private readonly enableLetSyntax: boolean,
+    private readonly disableImageImports: boolean,
     private readonly localCompilationExtraImportsTracker: LocalCompilationExtraImportsTracker | null,
     private readonly jitDeclarationRegistry: JitDeclarationRegistry,
   ) {
@@ -258,6 +259,7 @@ export class ComponentDecoratorHandler
       usePoisonedData: this.usePoisonedData,
       enableBlockSyntax: this.enableBlockSyntax,
       enableLetSyntax: this.enableLetSyntax,
+      disableImageImports: this.disableImageImports,
     };
   }
 
@@ -278,6 +280,7 @@ export class ComponentDecoratorHandler
     usePoisonedData: boolean;
     enableBlockSyntax: boolean;
     enableLetSyntax: boolean;
+    disableImageImports: boolean;
   };
 
   readonly precedence = HandlerPrecedence.PRIMARY;
@@ -629,6 +632,7 @@ export class ComponentDecoratorHandler
           usePoisonedData: this.usePoisonedData,
           enableBlockSyntax: this.enableBlockSyntax,
           enableLetSyntax: this.enableLetSyntax,
+          disableImageImports: this.disableImageImports,
         },
         this.compilationMode,
       );
@@ -775,6 +779,7 @@ export class ComponentDecoratorHandler
       analysis: {
         baseClass: readBaseClass(node, this.reflector, this.evaluator),
         inputs,
+        inputFieldNamesFromMetadataArray: directiveResult.inputFieldNamesFromMetadataArray,
         outputs,
         hostDirectives,
         rawHostDirectives,
@@ -793,6 +798,7 @@ export class ComponentDecoratorHandler
           i18nUseExternalIds: this.i18nUseExternalIds,
           relativeContextFilePath,
           rawImports: rawImports !== null ? new o.WrappedNodeExpr(rawImports) : undefined,
+          disableImageImports: this.disableImageImports,
         },
         typeCheckMeta: extractDirectiveTypeCheckMeta(node, inputs, this.reflector),
         classMetadata: this.includeClassMetadata
@@ -861,6 +867,7 @@ export class ComponentDecoratorHandler
       selector: analysis.meta.selector,
       exportAs: analysis.meta.exportAs,
       inputs: analysis.inputs,
+      inputFieldNamesFromMetadataArray: analysis.inputFieldNamesFromMetadataArray,
       outputs: analysis.outputs,
       queries: analysis.meta.queries.map((query) => query.propertyName),
       isComponent: true,
@@ -1534,6 +1541,7 @@ export class ComponentDecoratorHandler
       ...analysis.meta,
       ...resolution,
       defer: this.compileDeferBlocks(resolution),
+      disableImageImports: this.disableImageImports,
     };
     const fac = compileNgFactoryDefField(toFactoryMetadata(meta, FactoryTarget.Component));
 

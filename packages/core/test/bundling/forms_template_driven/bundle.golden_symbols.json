@@ -792,6 +792,9 @@
     "name": "booleanAttribute"
   },
   {
+    "name": "bootstrap"
+  },
+  {
     "name": "callHook"
   },
   {
@@ -1320,6 +1323,9 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isArrayLike"
   },
   {
@@ -1549,9 +1555,6 @@
   },
   {
     "name": "ngOnChangesSetInput"
-  },
-  {
-    "name": "ngZoneApplicationErrorHandlerFactory"
   },
   {
     "name": "noSideEffects"

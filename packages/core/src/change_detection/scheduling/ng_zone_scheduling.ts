@@ -18,7 +18,6 @@ import {
   makeEnvironmentProviders,
   StaticProvider,
 } from '../../di';
-import {ErrorHandler, INTERNAL_APPLICATION_ERROR_HANDLER} from '../../error_handler';
 import {RuntimeError, RuntimeErrorCode} from '../../errors';
 import {PendingTasks} from '../../pending_tasks';
 import {performanceMarkFeature} from '../../util/performance';
@@ -113,17 +112,10 @@ export function internalProvideZoneChangeDetection({
         };
       },
     },
-    {provide: INTERNAL_APPLICATION_ERROR_HANDLER, useFactory: ngZoneApplicationErrorHandlerFactory},
     // Always disable scheduler whenever explicitly disabled, even if another place called
     // `provideZoneChangeDetection` without the 'ignore' option.
     ignoreChangesOutsideZone === true ? {provide: ZONELESS_SCHEDULER_DISABLED, useValue: true} : [],
   ];
-}
-
-export function ngZoneApplicationErrorHandlerFactory() {
-  const zone = inject(NgZone);
-  const userErrorHandler = inject(ErrorHandler);
-  return (e: unknown) => zone.runOutsideAngular(() => userErrorHandler.handleError(e));
 }
 
 /**
@@ -223,10 +215,15 @@ export interface NgZoneOptions {
    * - calling `ChangeDetectorRef.markForCheck`
    * - calling `ComponentRef.setInput`
    * - updating a signal that is read in a template
-   * - when bound host or template listeners are triggered
    * - attaching a view that is marked dirty
    * - removing a view
    * - registering a render hook (templates are only refreshed if render hooks do one of the above)
+   *
+   * @deprecated This option was introduced out of caution as a way for developers to opt out of the
+   *    new behavior in v18 which schedule change detection for the above events when they occur
+   *    outside the Zone. After monitoring the results post-release, we have determined that this
+   *    feature is working as desired and do not believe it should ever be disabled by setting
+   *    this option to `true`.
    */
   ignoreChangesOutsideZone?: boolean;
 }

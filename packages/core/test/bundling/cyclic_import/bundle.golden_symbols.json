@@ -573,6 +573,9 @@
     "name": "bloomHasToken"
   },
   {
+    "name": "bootstrap"
+  },
+  {
     "name": "callHook"
   },
   {
@@ -939,6 +942,9 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isComponentDef"
   },
   {
@@ -1060,9 +1066,6 @@
   },
   {
     "name": "ngOnChangesSetInput"
-  },
-  {
-    "name": "ngZoneApplicationErrorHandlerFactory"
   },
   {
     "name": "noSideEffects"

@@ -909,6 +909,7 @@ export class ExternalReference {
     public moduleName: string | null,
     public name: string | null,
     public runtime?: any | null,
+    public attributes?: Record<string, string> | null,
   ) {}
   // Note: no isEquivalent method here as we use this as an interface too.
 }
@@ -1303,6 +1304,28 @@ export class LiteralArrayExpr extends Expression {
   }
 }
 
+export class SpreadedIterableExpr extends Expression {
+  public iterable: Expression;
+  constructor(iterable: Expression, type?: Type | null, sourceSpan?: ParseSourceSpan | null) {
+    super(type, sourceSpan);
+    this.iterable = iterable;
+  }
+
+  override isEquivalent(e: Expression): boolean {
+    return this.iterable.isEquivalent(e);
+  }
+  override isConstant(): boolean {
+    return false;
+  }
+  override visitExpression(visitor: ExpressionVisitor, context: any): any {
+    return visitor.visitSpreadedIterableExpr(this, context);
+  }
+
+  override clone(): SpreadedIterableExpr {
+    return new SpreadedIterableExpr(this.iterable.clone(), this.type, this.sourceSpan);
+  }
+}
+
 export class LiteralMapEntry {
   constructor(
     public key: string,
@@ -1394,6 +1417,7 @@ export interface ExpressionVisitor {
   visitReadPropExpr(ast: ReadPropExpr, context: any): any;
   visitReadKeyExpr(ast: ReadKeyExpr, context: any): any;
   visitLiteralArrayExpr(ast: LiteralArrayExpr, context: any): any;
+  visitSpreadedIterableExpr(ast: SpreadedIterableExpr, context: any): any;
   visitLiteralMapExpr(ast: LiteralMapExpr, context: any): any;
   visitCommaExpr(ast: CommaExpr, context: any): any;
   visitWrappedNodeExpr(ast: WrappedNodeExpr<any>, context: any): any;
@@ -1698,6 +1722,10 @@ export class RecursiveAstVisitor implements StatementVisitor, ExpressionVisitor 
     this.visitAllExpressions(ast.entries, context);
     return this.visitExpression(ast, context);
   }
+  visitSpreadedIterableExpr(ast: SpreadedIterableExpr, context: any): any {
+    this.visitExpression(ast.iterable, context);
+    return this.visitExpression(ast, context);
+  }
   visitLiteralMapExpr(ast: LiteralMapExpr, context: any): any {
     ast.entries.forEach((entry) => entry.value.visitExpression(this, context));
     return this.visitExpression(ast, context);
@@ -1814,6 +1842,14 @@ export function literalMap(
     type,
     null,
   );
+}
+
+export function spreaded(
+  iterable: Expression,
+  type?: Type,
+  sourceSpan?: ParseSourceSpan | null,
+): SpreadedIterableExpr {
+  return new SpreadedIterableExpr(iterable, type, sourceSpan);
 }
 
 export function unary(

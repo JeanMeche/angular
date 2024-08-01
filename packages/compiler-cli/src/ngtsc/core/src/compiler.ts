@@ -125,6 +125,7 @@ import {DiagnosticCategoryLabel, NgCompilerAdapter, NgCompilerOptions} from '../
 import {coreHasSymbol} from './core_version';
 import {coreVersionSupportsFeature} from './feature_detection';
 import {angularJitApplicationTransform} from '../../transform/jit';
+import {untagAllTsFiles} from '../../shims';
 
 /**
  * State information about a compilation which is only generated once some data is requested from
@@ -388,6 +389,7 @@ export class NgCompiler {
   readonly enableTemplateTypeChecker: boolean;
   private readonly enableBlockSyntax: boolean;
   private readonly enableLetSyntax: boolean;
+  private readonly disableImageImports: boolean;
   private readonly angularCoreVersion: string | null;
 
   /**
@@ -454,12 +456,16 @@ export class NgCompiler {
     private livePerfRecorder: ActivePerfRecorder,
   ) {
     this.delegatingPerfRecorder = new DelegatingPerfRecorder(this.perfRecorder);
+    this.usePoisonedData = usePoisonedData || !!options._compilePoisonedComponents;
     this.enableTemplateTypeChecker =
-      enableTemplateTypeChecker || (options['_enableTemplateTypeChecker'] ?? false);
+      enableTemplateTypeChecker || !!options._enableTemplateTypeChecker;
     // TODO(crisbeto): remove this flag and base `enableBlockSyntax` on the `angularCoreVersion`.
     this.enableBlockSyntax = options['_enableBlockSyntax'] ?? true;
     this.enableLetSyntax = options['_enableLetSyntax'] ?? true;
     this.angularCoreVersion = options['_angularCoreVersion'] ?? null;
+
+    this.disableImageImports = options['disableImageImports'] === true;
+
     this.constructionDiagnostics.push(
       ...this.adapter.constructionDiagnostics,
       ...verifyCompatibleTypeCheckOptions(this.options),
@@ -791,6 +797,10 @@ export class NgCompiler {
     transformers: ts.CustomTransformers;
   } {
     const compilation = this.ensureAnalyzed();
+
+    // Untag all the files, otherwise TS 5.4 may end up emitting
+    // references to typecheck files (see #56945 and #57135).
+    untagAllTsFiles(this.inputProgram);
 
     const coreImportsFrom = compilation.isCore ? getR3SymbolsFile(this.inputProgram) : null;
     let importRewriter: ImportRewriter;
@@ -1438,6 +1448,7 @@ export class NgCompiler {
         !!this.options.forbidOrphanComponents,
         this.enableBlockSyntax,
         this.enableLetSyntax,
+        this.disableImageImports,
         localCompilationExtraImportsTracker,
         jitDeclarationRegistry,
       ),
@@ -1506,6 +1517,7 @@ export class NgCompiler {
         supportJitMode,
         compilationMode,
         localCompilationExtraImportsTracker,
+        jitDeclarationRegistry,
       ),
     ];
 

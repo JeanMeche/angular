@@ -29,6 +29,7 @@ import {first} from 'rxjs/operators';
 
 import {DeferBlockFixture} from './defer';
 import {ComponentFixtureAutoDetect, ComponentFixtureNoNgZone} from './test_bed_common';
+import {TestBedApplicationErrorHandler} from './application_error_handler';
 
 /**
  * Fixture for debugging and testing a component.
@@ -80,6 +81,7 @@ export abstract class ComponentFixture<T> {
   /** @internal */
   protected readonly _testAppRef = this._appRef as unknown as TestAppRef;
   private readonly pendingTasks = inject(PendingTasks);
+  private readonly appErrorHandler = inject(TestBedApplicationErrorHandler);
 
   // TODO(atscott): Remove this from public API
   ngZone = this._noZoneOptionIsSet ? null : this._ngZone;
@@ -131,7 +133,17 @@ export abstract class ComponentFixture<T> {
     if (this.isStable()) {
       return Promise.resolve(false);
     }
-    return this._appRef.isStable.pipe(first((stable) => stable)).toPromise();
+
+    return new Promise((resolve, reject) => {
+      this.appErrorHandler.whenStableRejectFunctions.add(reject);
+      this._appRef.isStable
+        .pipe(first((stable) => stable))
+        .toPromise()
+        .then((v) => {
+          this.appErrorHandler.whenStableRejectFunctions.delete(reject);
+          resolve(v);
+        });
+    });
   }
 
   /**

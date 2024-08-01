@@ -39,7 +39,9 @@ jobs:
       - name: Check code format
         run: yarn ng-dev format changed --check ${{ github.event.pull_request.base.sha }}
       - name: Check Package Licenses
-        uses: angular/dev-infra/github-actions/linting/licenses@515b575bd6650a12353b6039b618cdb808280ad7
+        uses: angular/dev-infra/github-actions/linting/licenses@56966c765e97f463c4795fac85d46543d1e6b342
+        with:
+          allow-dependencies-licenses: 'pkg:npm/google-protobuf@'
 
   devtools:
     runs-on: ubuntu-latest
@@ -93,7 +95,7 @@ jobs:
       - name: Run CI tests for framework
         run: yarn tsx ./scripts/build/build-packages-dist.mts
       - name: Archive build artifacts
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: pr-artifacts-${{ github.event.number }}
           path: dist/packages-dist/

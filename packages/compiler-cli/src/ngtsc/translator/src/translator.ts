@@ -302,6 +302,7 @@ export class ExpressionTranslatorVisitor<TFile, TStatement, TExpression>
         exportModuleSpecifier: ast.value.moduleName,
         exportSymbolName: null,
         requestedFile: this.contextFile,
+        attributes: ast.value.attributes,
       });
     }
     // If a moduleName is specified, this is a normal import. If there's no module name, it's a
@@ -312,6 +313,7 @@ export class ExpressionTranslatorVisitor<TFile, TStatement, TExpression>
         exportModuleSpecifier: ast.value.moduleName,
         exportSymbolName: ast.value.name,
         requestedFile: this.contextFile,
+        attributes: ast.value.attributes,
       });
     } else {
       // The symbol is ambient, so just reference it.
@@ -400,6 +402,10 @@ export class ExpressionTranslatorVisitor<TFile, TStatement, TExpression>
       ast.receiver.visitExpression(this, context),
       ast.index.visitExpression(this, context),
     );
+  }
+
+  visitSpreadedIterableExpr(ast: o.outputAst.SpreadedIterableExpr, context: any) {
+    return this.factory.createSpreadedExpression(ast.iterable.visitExpression(this, context));
   }
 
   visitLiteralArrayExpr(ast: o.LiteralArrayExpr, context: Context): TExpression {

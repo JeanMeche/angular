@@ -9,6 +9,7 @@
 import ts from 'typescript';
 
 import {
+  ApplyRefactoringProgressFn,
   GetComponentLocationsForTemplateResponse,
   GetTcbResponse,
   GetTemplateLocationForComponentResponse,
@@ -253,6 +254,28 @@ export function create(info: ts.server.PluginCreateInfo): NgLanguageService {
     return ngLS.getTemplateLocationForComponent(fileName, position);
   }
 
+  function getApplicableRefactors(
+    fileName: string,
+    positionOrRange: number | ts.TextRange,
+  ): ts.ApplicableRefactorInfo[] {
+    // We never forward to TS for refactors because those are not handled
+    // properly by the LSP server implementation of the extension. The extension
+    // will only take care of refactorings from Angular language service.
+    // Code actions are tied to their provider, so this is unproblematic and will
+    // not hide built-in TypeScript refactorings:
+    // https://github.com/microsoft/vscode/blob/ea4d99921cc790d49194e897021faee02a1847f7/src/vs/editor/contrib/codeAction/codeAction.ts#L30-L31
+    return ngLS.getPossibleRefactorings(fileName, positionOrRange);
+  }
+
+  function applyRefactoring(
+    fileName: string,
+    positionOrRange: number | ts.TextRange,
+    refactorName: string,
+    reportProgress: ApplyRefactoringProgressFn,
+  ): ts.RefactorEditInfo | undefined {
+    return ngLS.applyRefactoring(fileName, positionOrRange, refactorName, reportProgress);
+  }
+
   function getCodeFixesAtPosition(
     fileName: string,
     start: number,
@@ -327,9 +350,12 @@ export function create(info: ts.server.PluginCreateInfo): NgLanguageService {
     getSignatureHelpItems,
     getOutliningSpans,
     getTemplateLocationForComponent,
+    hasCodeFixesForErrorCode: ngLS.hasCodeFixesForErrorCode.bind(ngLS),
     getCodeFixesAtPosition,
     getCombinedCodeFix,
     getTypescriptLanguageService,
+    getApplicableRefactors,
+    applyRefactoring,
   };
 }
 

@@ -549,9 +549,6 @@
     "name": "_getInsertInFrontOfRNodeWithI18n"
   },
   {
-    "name": "_global"
-  },
-  {
     "name": "_icuContainerIterate"
   },
   {
@@ -628,6 +625,9 @@
   },
   {
     "name": "bloomHasToken"
+  },
+  {
+    "name": "bootstrap"
   },
   {
     "name": "calcSerializedContainerSize"
@@ -769,9 +769,6 @@
   },
   {
     "name": "diPublicInInjector"
-  },
-  {
-    "name": "enableHydrationRuntimeSupport"
   },
   {
     "name": "enterDI"
@@ -1023,6 +1020,9 @@
     "name": "invokeHostBindingsInCreationMode"
   },
   {
+    "name": "isApplicationBootstrapConfig"
+  },
+  {
     "name": "isArrayLike"
   },
   {
@@ -1177,9 +1177,6 @@
   },
   {
     "name": "ngOnChangesSetInput"
-  },
-  {
-    "name": "ngZoneApplicationErrorHandlerFactory"
   },
   {
     "name": "nonNull"
@@ -1396,6 +1393,9 @@
   },
   {
     "name": "whenStableStore"
+  },
+  {
+    "name": "withDomHydration"
   },
   {
     "name": "writeDirectClass"
