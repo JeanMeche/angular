@@ -85,8 +85,9 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
     metaObj: AstObject<R3PartialDeclaration, TExpression>,
     version: string,
   ): LinkedDefinition {
-    const meta = this.toR3ComponentMeta(metaObj, version);
-    return compileComponentFromMetadata(meta, constantPool, makeBindingParser());
+    // TODO
+    const meta = this.toR3ComponentMeta(metaObj as any, version);
+    return compileComponentFromMetadata(meta, constantPool, makeBindingParser(), []);
   }
 
   /**

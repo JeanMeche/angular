@@ -56,6 +56,7 @@ export function ivyTransformFactory(
   const recordWrappedNode = createRecorderFn(defaultImportTracker);
   return (context: ts.TransformationContext): ts.Transformer<ts.SourceFile> => {
     return (file: ts.SourceFile): ts.SourceFile => {
+      const symbols = getTopLevelDeclarations(file);
       return perf.inPhase(PerfPhase.Compile, () =>
         transformIvySourceFile(
           compilation,
@@ -67,6 +68,7 @@ export function ivyTransformFactory(
           isCore,
           isClosureCompilerEnabled,
           recordWrappedNode,
+          symbols,
         ),
       );
     };
@@ -85,6 +87,7 @@ class IvyCompilationVisitor extends Visitor {
   constructor(
     private compilation: TraitCompiler,
     private constantPool: ConstantPool,
+    private symbols: string[],
   ) {
     super();
   }
@@ -94,7 +97,7 @@ class IvyCompilationVisitor extends Visitor {
   ): VisitListEntryResult<ts.Statement, ts.ClassDeclaration> {
     // Determine if this class has an Ivy field that needs to be added, and compile the field
     // to an expression if so.
-    const result = this.compilation.compile(node, this.constantPool);
+    const result = this.compilation.compile(node, this.constantPool, this.symbols);
     if (result !== null) {
       this.classCompilationMap.set(node, result);
 
@@ -369,6 +372,7 @@ function transformIvySourceFile(
   isCore: boolean,
   isClosureCompilerEnabled: boolean,
   recordWrappedNode: RecordWrappedNodeFn<ts.Expression>,
+  symbols: string[],
 ): ts.SourceFile {
   const constantPool = new ConstantPool(isClosureCompilerEnabled);
   const importManager = new ImportManager({
@@ -387,7 +391,7 @@ function transformIvySourceFile(
   // components declared in the same file.
 
   // Step 1. Go though all classes in AST, perform compilation and collect the results.
-  const compilationVisitor = new IvyCompilationVisitor(compilation, constantPool);
+  const compilationVisitor = new IvyCompilationVisitor(compilation, constantPool, symbols);
   visit(file, compilationVisitor, context);
 
   // Step 2. Scan through the AST again and perform transformations based on Ivy compilation
@@ -549,4 +553,44 @@ function nodeArrayFromDecoratorsArray(
   }
 
   return array;
+}
+
+function getTopLevelDeclarations(sourceFile: ts.SourceFile): string[] {
+  const symbols: string[] = [];
+
+  // Traverse the AST
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && node.importClause) {
+      const importClause = node.importClause;
+
+      // Default import (e.g., `import foo from 'module';`)
+      if (importClause.name) {
+        symbols.push(importClause.name.text);
+      }
+
+      // Named imports (e.g., `import { bar, baz } from 'module';`)
+      if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+        for (const element of importClause.namedBindings.elements) {
+          symbols.push(element.name.text);
+        }
+      }
+
+      // Namespace import (e.g., `import * as ns from 'module';`)
+      if (importClause.namedBindings && ts.isNamespaceImport(importClause.namedBindings)) {
+        symbols.push(importClause.namedBindings.name.text);
+      }
+    }
+
+    if (ts.isDeclarationStatement(node) || ts.isVariableDeclaration(node)) {
+      const name = (node as ts.NamedDeclaration).name;
+      if (name && ts.isIdentifier(name)) {
+        symbols.push(name.text);
+      }
+    }
+
+    ts.forEachChild(node, visit); // Recursively process child nodes
+  };
+
+  visit(sourceFile);
+  return symbols;
 }

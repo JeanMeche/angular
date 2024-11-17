@@ -170,9 +170,11 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
       return;
     }
 
+    const symbols = getImportedSymbols(sf);
+
     const visit = (node: ts.Node): void => {
       if (this.reflector.isClass(node)) {
-        this.analyzeClass(node, preanalyze ? promises : null);
+        this.analyzeClass(node, preanalyze ? promises : null, symbols);
       }
       ts.forEachChild(node, visit);
     };
@@ -245,7 +247,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
         const symbol = this.makeSymbolForTrait(handler, record.node, priorTrait.analysis);
         trait = trait.toAnalyzed(priorTrait.analysis, priorTrait.analysisDiagnostics, symbol);
         if (trait.analysis !== null && trait.handler.register !== undefined) {
-          trait.handler.register(record.node, trait.analysis);
+          trait.handler.register(record.node, trait.analysis, []);
         }
       } else if (priorTrait.state === TraitState.Skipped) {
         trait = trait.toSkipped();
@@ -411,7 +413,11 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     return symbol;
   }
 
-  private analyzeClass(clazz: ClassDeclaration, preanalyzeQueue: Promise<void>[] | null): void {
+  private analyzeClass(
+    clazz: ClassDeclaration,
+    preanalyzeQueue: Promise<void>[] | null,
+    symbols: string[],
+  ): void {
     const traits = this.scanClassForTraits(clazz);
 
     if (traits === null) {
@@ -420,7 +426,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     }
 
     for (const trait of traits) {
-      const analyze = () => this.analyzeTrait(clazz, trait);
+      const analyze = () => this.analyzeTrait(clazz, trait, symbols);
 
       let preanalysis: Promise<void> | null = null;
       if (preanalyzeQueue !== null && trait.handler.preanalyze !== undefined) {
@@ -448,6 +454,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
   private analyzeTrait(
     clazz: ClassDeclaration,
     trait: Trait<unknown, unknown, SemanticSymbol | null, unknown>,
+    symbols: string[],
   ): void {
     if (trait.state !== TraitState.Pending) {
       throw new Error(
@@ -462,7 +469,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     // Attempt analysis. This could fail with a `FatalDiagnosticError`; catch it if it does.
     let result: AnalysisOutput<unknown>;
     try {
-      result = trait.handler.analyze(clazz, trait.detected.metadata);
+      result = trait.handler.analyze(clazz, trait.detected.metadata, symbols);
     } catch (err) {
       if (err instanceof FatalDiagnosticError) {
         trait.toAnalyzed(null, [err.toDiagnostic()], null);
@@ -474,7 +481,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
 
     const symbol = this.makeSymbolForTrait(trait.handler, clazz, result.analysis ?? null);
     if (result.analysis !== undefined && trait.handler.register !== undefined) {
-      trait.handler.register(clazz, result.analysis);
+      trait.handler.register(clazz, result.analysis, symbols);
     }
     trait = trait.toAnalyzed(result.analysis ?? null, result.diagnostics ?? null, symbol);
   }
@@ -647,7 +654,11 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     }
   }
 
-  compile(clazz: DeclarationNode, constantPool: ConstantPool): CompileResult[] | null {
+  compile(
+    clazz: DeclarationNode,
+    constantPool: ConstantPool,
+    symbols: string[],
+  ): CompileResult[] | null {
     const original = ts.getOriginalNode(clazz) as typeof clazz;
     if (
       !this.reflector.isClass(clazz) ||
@@ -682,6 +693,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
           trait.analysis!,
           trait.resolution!,
           constantPool,
+          symbols,
         );
       } else {
         // `trait.resolution` is non-null asserted below because TypeScript does not recognize that
@@ -691,13 +703,14 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
           this.compilationMode === CompilationMode.PARTIAL &&
           trait.handler.compilePartial !== undefined
         ) {
-          compileRes = trait.handler.compilePartial(clazz, trait.analysis, trait.resolution!);
+          compileRes = trait.handler.compilePartial(clazz, trait.analysis, trait.resolution!, []);
         } else {
           compileRes = trait.handler.compileFull(
             clazz,
             trait.analysis,
             trait.resolution!,
             constantPool,
+            symbols,
           );
         }
       }
@@ -745,7 +758,13 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
         !containsErrors(trait.analysisDiagnostics) &&
         !containsErrors(trait.resolveDiagnostics)
       ) {
-        return trait.handler.compileHmrUpdateDeclaration(clazz, trait.analysis, trait.resolution!);
+        // TODO
+        return trait.handler.compileHmrUpdateDeclaration(
+          clazz,
+          trait.analysis,
+          trait.resolution!,
+          [],
+        );
       }
     }
 
@@ -807,4 +826,37 @@ function containsErrors(diagnostics: ts.Diagnostic[] | null): boolean {
     diagnostics !== null &&
     diagnostics.some((diag) => diag.category === ts.DiagnosticCategory.Error)
   );
+}
+
+function getImportedSymbols(sourceFile: ts.SourceFile): string[] {
+  const importedSymbols: string[] = [];
+
+  // Traverse the AST
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && node.importClause) {
+      const importClause = node.importClause;
+
+      // Default import (e.g., `import foo from 'module';`)
+      if (importClause.name) {
+        importedSymbols.push(importClause.name.text);
+      }
+
+      // Named imports (e.g., `import { bar, baz } from 'module';`)
+      if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+        for (const element of importClause.namedBindings.elements) {
+          importedSymbols.push(element.name.text);
+        }
+      }
+
+      // Namespace import (e.g., `import * as ns from 'module';`)
+      if (importClause.namedBindings && ts.isNamespaceImport(importClause.namedBindings)) {
+        importedSymbols.push(importClause.namedBindings.name.text);
+      }
+    }
+
+    ts.forEachChild(node, visit); // Recursively process child nodes
+  };
+
+  visit(sourceFile);
+  return importedSymbols;
 }
