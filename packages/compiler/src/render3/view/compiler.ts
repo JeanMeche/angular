@@ -184,6 +184,7 @@ export function compileComponentFromMetadata(
   meta: R3ComponentMetadata<R3TemplateDependency>,
   constantPool: ConstantPool,
   bindingParser: BindingParser,
+  symbols: string[],
 ): R3CompiledExpression {
   const definitionMap = baseDirectiveFields(meta, constantPool, bindingParser);
   addFeatures(definitionMap, meta);
@@ -234,6 +235,7 @@ export function compileComponentFromMetadata(
     meta.i18nUseExternalIds,
     meta.defer,
     allDeferrableDepsFn,
+    symbols,
   );
 
   // Then the IR is transformed to prepare it for cod egeneration.

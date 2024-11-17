@@ -219,6 +219,7 @@ export class DtsMetadataReader implements MetadataReader {
       // used to increase the accuracy of a diagnostic.
       preserveWhitespaces: false,
       isExplicitlyDeferred: false,
+      symbols: null,
     };
   }
 

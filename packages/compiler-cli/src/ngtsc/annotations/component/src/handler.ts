@@ -443,6 +443,7 @@ export class ComponentDecoratorHandler
   analyze(
     node: ClassDeclaration,
     decorator: Readonly<Decorator>,
+    symbols: string[],
   ): AnalysisOutput<ComponentAnalysisData> {
     this.perf.eventCount(PerfEvent.AnalyzeComponent);
     const containingFile = node.getSourceFile().fileName;
@@ -904,6 +905,7 @@ export class ComponentDecoratorHandler
         explicitlyDeferredTypes,
         schemas,
         decorator: (decorator?.node as ts.Decorator | null) ?? null,
+        symbols,
       },
       diagnostics,
     };
@@ -958,6 +960,7 @@ export class ComponentDecoratorHandler
       ngContentSelectors: analysis.template.ngContentSelectors,
       preserveWhitespaces: analysis.template.preserveWhitespaces ?? false,
       isExplicitlyDeferred: false,
+      symbols: analysis.symbols,
     });
 
     this.resourceRegistry.registerResources(analysis.resources, node);
@@ -1602,6 +1605,7 @@ export class ComponentDecoratorHandler
     analysis: Readonly<ComponentAnalysisData>,
     resolution: Readonly<ComponentResolutionData>,
     pool: ConstantPool,
+    symbols: string[],
   ): CompileResult[] {
     if (analysis.template.errors !== null && analysis.template.errors.length > 0) {
       return [];
@@ -1621,7 +1625,7 @@ export class ComponentDecoratorHandler
       removeDeferrableTypesFromComponentDecorator(analysis, perComponentDeferredDeps);
     }
 
-    const def = compileComponentFromMetadata(meta, pool, makeBindingParser());
+    const def = compileComponentFromMetadata(meta, pool, makeBindingParser(), symbols);
     const inputTransformFields = compileInputTransformFields(analysis.inputs);
     const classMetadata =
       analysis.classMetadata !== null
@@ -1728,6 +1732,7 @@ export class ComponentDecoratorHandler
     analysis: Readonly<ComponentAnalysisData>,
     resolution: Readonly<Partial<ComponentResolutionData>>,
     pool: ConstantPool,
+    symbols: string[],
   ): CompileResult[] {
     // In the local compilation mode we can only rely on the information available
     // within the `@Component.deferredImports` array, because in this mode compiler
@@ -1745,7 +1750,7 @@ export class ComponentDecoratorHandler
     }
 
     const fac = compileNgFactoryDefField(toFactoryMetadata(meta, FactoryTarget.Component));
-    const def = compileComponentFromMetadata(meta, pool, makeBindingParser());
+    const def = compileComponentFromMetadata(meta, pool, makeBindingParser(), symbols);
     const inputTransformFields = compileInputTransformFields(analysis.inputs);
     const classMetadata =
       analysis.classMetadata !== null
@@ -1787,6 +1792,7 @@ export class ComponentDecoratorHandler
     node: ClassDeclaration,
     analysis: Readonly<ComponentAnalysisData>,
     resolution: Readonly<ComponentResolutionData>,
+    symbols: string[],
   ): ts.FunctionDeclaration | null {
     if (analysis.template.errors !== null && analysis.template.errors.length > 0) {
       return null;
@@ -1800,7 +1806,7 @@ export class ComponentDecoratorHandler
       defer: this.compileDeferBlocks(resolution),
     };
     const fac = compileNgFactoryDefField(toFactoryMetadata(meta, FactoryTarget.Component));
-    const def = compileComponentFromMetadata(meta, pool, makeBindingParser());
+    const def = compileComponentFromMetadata(meta, pool, makeBindingParser(), symbols);
     const classMetadata =
       analysis.classMetadata !== null
         ? compileComponentClassMetadata(analysis.classMetadata, null).toStmt()

@@ -94,6 +94,8 @@ export interface ComponentAnalysisData {
   rawDeferredImports: ts.Expression | null;
   resolvedDeferredImports: Reference<ClassDeclaration>[] | null;
 
+  symbols: string[] | null;
+
   /**
    * Map of symbol name -> import path for types from `@Component.deferredImports` field.
    */

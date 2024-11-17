@@ -262,6 +262,11 @@ export interface DirectiveMeta extends T2DirectiveMeta, DirectiveTypeCheckMeta {
   deferredImports: Reference<ClassDeclaration>[] | null;
 
   /**
+   * Imported symbols in the module where the directive is declared
+   */
+  symbols: string[] | null;
+
+  /**
    * For standalone components, the list of schemas declared.
    */
   schemas: SchemaMetadata[] | null;

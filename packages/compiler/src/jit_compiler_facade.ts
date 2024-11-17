@@ -347,7 +347,8 @@ export class CompilerFacadeImpl implements CompilerFacade {
   ): any {
     const constantPool = new ConstantPool();
     const bindingParser = makeBindingParser(meta.interpolation);
-    const res = compileComponentFromMetadata(meta, constantPool, bindingParser);
+    // TODO
+    const res = compileComponentFromMetadata(meta, constantPool, bindingParser, []);
     return this.jitExpression(
       res.expression,
       angularCoreEnv,

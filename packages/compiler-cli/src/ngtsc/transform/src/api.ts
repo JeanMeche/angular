@@ -112,7 +112,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
    * builds. Any side effects required for compilation (e.g. registration of metadata) should happen
    * in the `register` phase, which is guaranteed to run even for incremental builds.
    */
-  analyze(node: ClassDeclaration, metadata: Readonly<D>): AnalysisOutput<A>;
+  analyze(node: ClassDeclaration, metadata: Readonly<D>, symbols: string[]): AnalysisOutput<A>;
 
   /**
    * React to a change in a resource file by updating the `analysis` or `resolution`, under the
@@ -141,7 +141,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
    * Registration always occurs for a given decorator/class, regardless of whether analysis was
    * performed directly or whether the analysis results were reused from the previous program.
    */
-  register?(node: ClassDeclaration, analysis: A): void;
+  register?(node: ClassDeclaration, analysis: A, symbols: string[]): void;
 
   /**
    * Registers information about the decorator for the indexing phase in a
@@ -199,6 +199,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
     analysis: Readonly<A>,
     resolution: Readonly<R>,
     constantPool: ConstantPool,
+    symbols: string[],
   ): CompileResult | CompileResult[];
 
   /**
@@ -213,6 +214,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
     node: ClassDeclaration,
     analysis: Readonly<A>,
     resolution: Readonly<R>,
+    symbols: string[],
   ): CompileResult | CompileResult[];
 
   /**
@@ -222,6 +224,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
     node: ClassDeclaration,
     analysis: Readonly<A>,
     resolution: Readonly<R>,
+    symbols: string[],
   ): ts.FunctionDeclaration | null;
 
   /**
@@ -233,6 +236,7 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
     analysis: Readonly<A>,
     resolution: Readonly<Partial<R>>,
     constantPool: ConstantPool,
+    symbols: string[],
   ): CompileResult | CompileResult[];
 }
 
