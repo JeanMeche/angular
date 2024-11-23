@@ -203,6 +203,7 @@ export function compileFactoryFunction(meta: R3FactoryMetadata): R3CompiledExpre
     expression: factoryFn,
     statements: [],
     type: createFactoryType(meta),
+    additionalImports: [],
   };
 }
 

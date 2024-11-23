@@ -174,7 +174,7 @@ export function compileDirectiveFromMetadata(
     .callFn([definitionMap.toLiteralMap()], undefined, true);
   const type = createDirectiveType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**
@@ -234,6 +234,7 @@ export function compileComponentFromMetadata(
     meta.i18nUseExternalIds,
     meta.defer,
     allDeferrableDepsFn,
+    meta.inFileDeclarations,
   );
 
   // Then the IR is transformed to prepare it for cod egeneration.
@@ -241,6 +242,8 @@ export function compileComponentFromMetadata(
 
   // Finally we emit the template function:
   const templateFn = emitTemplateFn(tpl, constantPool);
+
+  const usedDeclarations = tpl.usedDeclarations;
 
   if (tpl.contentSelectors !== null) {
     definitionMap.set('ngContentSelectors', tpl.contentSelectors);
@@ -341,7 +344,13 @@ export function compileComponentFromMetadata(
     .callFn([definitionMap.toLiteralMap()], undefined, true);
   const type = createComponentType(meta);
 
-  return {expression, type, statements: []};
+  const additionalImports: {specifier: string; moduleName: string}[] = usedDeclarations.map(
+    (decl) => {
+      return {specifier: decl.name, moduleName: decl.moduleName};
+    },
+  );
+
+  return {expression, type, statements: [], additionalImports};
 }
 
 /**

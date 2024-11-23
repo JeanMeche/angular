@@ -31,7 +31,7 @@ export function compileDeclarePipeFromMetadata(meta: R3PipeMetadata): R3Compiled
   const expression = o.importExpr(R3.declarePipe).callFn([definitionMap.toLiteralMap()]);
   const type = createPipeType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**

@@ -142,6 +142,7 @@ export function generateTypeCheckBlock(
   domSchemaChecker: DomSchemaChecker,
   oobRecorder: OutOfBandDiagnosticRecorder,
   genericContextBehavior: TcbGenericContextBehavior,
+  declarations: string[],
 ): ts.FunctionDeclaration {
   const tcb = new Context(
     env,
@@ -154,7 +155,14 @@ export function generateTypeCheckBlock(
     meta.isStandalone,
     meta.preserveWhitespaces,
   );
-  const scope = Scope.forNodes(tcb, null, null, tcb.boundTarget.target.template!, /* guard */ null);
+  const scope = Scope.forNodes(
+    tcb,
+    null,
+    null,
+    tcb.boundTarget.target.template!,
+    /* guard */ null,
+    declarations,
+  );
   const ctxRawType = env.referenceType(ref);
   if (!ts.isTypeReferenceNode(ctxRawType)) {
     throw new Error(
@@ -521,6 +529,7 @@ class TcbTemplateBodyOp extends TcbOp {
       this.template,
       this.template.children,
       guard,
+      this.scope.inFileDeclarations,
     );
 
     // Render the template's `Scope` into its statements.
@@ -1651,7 +1660,14 @@ class TcbIfOp extends TcbOp {
     // that the body will inherit from. We do this, because we need to declare a separate variable
     // for the case where the expression has an alias _and_ because we need the processed
     // expression when generating the guard for the body.
-    const outerScope = Scope.forNodes(this.tcb, this.scope, branch, [], null);
+    const outerScope = Scope.forNodes(
+      this.tcb,
+      this.scope,
+      branch,
+      [],
+      null,
+      this.scope.inFileDeclarations,
+    );
     outerScope.render().forEach((stmt) => this.scope.addStatement(stmt));
     this.expressionScopes.set(branch, outerScope);
 
@@ -1680,6 +1696,7 @@ class TcbIfOp extends TcbOp {
       null,
       checkBody ? branch.children : [],
       checkBody ? this.generateBranchGuard(index) : null,
+      this.scope.inFileDeclarations,
     );
   }
 
@@ -1775,6 +1792,7 @@ class TcbSwitchOp extends TcbOp {
         null,
         checkBody ? current.children : [],
         checkBody ? this.generateGuard(current, switchExpression) : null,
+        this.scope.inFileDeclarations,
       );
       const statements = [...clauseScope.render(), ts.factory.createBreakStatement()];
 
@@ -1874,6 +1892,7 @@ class TcbForOfOp extends TcbOp {
       this.block,
       this.tcb.env.config.checkControlFlowBodies ? this.block.children : [],
       null,
+      this.scope.inFileDeclarations,
     );
     const initializerId = loopScope.resolve(this.block.item);
     if (!ts.isIdentifier(initializerId)) {
@@ -2050,6 +2069,7 @@ class Scope {
     private tcb: Context,
     private parent: Scope | null = null,
     private guard: ts.Expression | null = null,
+    public inFileDeclarations: string[] = [],
   ) {}
 
   /**
@@ -2069,8 +2089,9 @@ class Scope {
     scopedNode: TmplAstTemplate | TmplAstIfBlockBranch | TmplAstForLoopBlock | null,
     children: TmplAstNode[],
     guard: ts.Expression | null,
+    inFileDeclarations: string[],
   ): Scope {
-    const scope = new Scope(tcb, parentScope, guard);
+    const scope = new Scope(tcb, parentScope, guard, inFileDeclarations);
 
     if (parentScope === null && tcb.env.config.enableTemplateTypeChecker) {
       // Add an autocompletion point for the component context.
@@ -2263,6 +2284,10 @@ class Scope {
       return this.letDeclOpMap.has(node.name);
     }
     return this.referenceOpMap.has(node);
+  }
+
+  knowsDeclaration(decl: string): boolean {
+    return this.inFileDeclarations.includes(decl);
   }
 
   private resolveLocal(
@@ -2720,6 +2745,17 @@ class TcbExpressionTranslator {
       // `ImplicitReceiver` is resolved in the branch below.
       const target = this.tcb.boundTarget.getExpressionTarget(ast);
       const targetExpression = target === null ? null : this.getTargetNodeExpression(target, ast);
+
+      if (this.scope.knowsDeclaration(ast.name)) {
+        const exprAsAny = ts.factory.createAsExpression(
+          ts.factory.createIdentifier(ast.name),
+          ts.factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
+        );
+        const result = ts.factory.createParenthesizedExpression(exprAsAny);
+        addParseSpanInfo(result, ast.sourceSpan);
+        return result;
+      }
+
       if (
         target instanceof TmplAstLetDeclaration &&
         !this.isValidLetDeclarationAccess(target, ast)

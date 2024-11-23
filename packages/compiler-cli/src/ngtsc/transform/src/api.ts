@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {ConstantPool, Expression, Statement, Type} from '@angular/compiler';
+import {ConstantPool, Expression, Statement, Type, R3InFileDeclaration} from '@angular/compiler';
 import ts from 'typescript';
 
 import {Reexport, ReferenceEmitter} from '../../imports';
@@ -112,7 +112,11 @@ export interface DecoratorHandler<D, A, S extends SemanticSymbol | null, R> {
    * builds. Any side effects required for compilation (e.g. registration of metadata) should happen
    * in the `register` phase, which is guaranteed to run even for incremental builds.
    */
-  analyze(node: ClassDeclaration, metadata: Readonly<D>): AnalysisOutput<A>;
+  analyze(
+    node: ClassDeclaration,
+    metadata: Readonly<D>,
+    inFileDeclarations: R3InFileDeclaration[],
+  ): AnalysisOutput<A>;
 
   /**
    * React to a change in a resource file by updating the `analysis` or `resolution`, under the
@@ -279,6 +283,7 @@ export interface CompileResult {
   statements: Statement[];
   type: Type;
   deferrableImports: Set<ts.ImportDeclaration> | null;
+  additionalImports: {specifier: string; moduleName: string}[];
 }
 
 export interface ResolveResult<R> {

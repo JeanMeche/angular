@@ -253,6 +253,7 @@ export class InjectableDecoratorHandler
         statements: res.statements,
         type: res.type,
         deferrableImports: null,
+        additionalImports: [],
       });
     }
 

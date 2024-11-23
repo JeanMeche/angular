@@ -153,6 +153,8 @@ class IvyTransformationVisitor extends Visitor {
     // not have a direct reference to the source file.
     const sourceFile = ts.getOriginalNode(node).getSourceFile();
 
+    const before: ts.Statement[] = [];
+
     for (const field of this.classCompilationMap.get(node)!) {
       // Type-only member.
       if (field.initializer === null) {
@@ -194,6 +196,10 @@ class IvyTransformationVisitor extends Visitor {
         .forEach((stmt) => statements.push(stmt));
 
       members.push(property);
+
+      field.additionalImports.forEach((importData) => {
+        before.push(createNamedImport(importData.specifier, importData.moduleName));
+      });
     }
 
     const filteredDecorators =
@@ -217,7 +223,7 @@ class IvyTransformationVisitor extends Visitor {
       // Map over the class members and remove any Angular decorators from them.
       members.map((member) => this._stripAngularDecorators(member)),
     );
-    return {node, after: statements};
+    return {node, after: statements, before};
   }
 
   override visitOtherNode<T extends ts.Node>(node: T): T {
@@ -434,6 +440,26 @@ function transformIvySourceFile(
     sf = insertFileOverviewComment(sf, fileOverviewMeta);
   }
 
+  // if (sf.fileName.includes('main.ts')) {
+  //   const importManager = new ImportManager({
+  //     rewriter: importRewriter,
+  //     generateUniqueIdentifier: (sf, name) => ts.factory.createIdentifier(name),
+  //   });
+
+  //   importManager.addImport({
+  //     exportModuleSpecifier: './app/test.interface',
+  //     exportSymbolName: 'foo',
+  //     requestedFile: sf,
+  //   });
+  //   sf = importManager.transformTsFile(context, sf, constants);
+  // }
+
+  // if (sf.fileName.includes('main.ts')) {
+  //   const printer = ts.createPrinter();
+  //   const tsCode = printer.printFile(sf);
+  //   console.warn(tsCode);
+  // }
+
   return sf;
 }
 
@@ -549,4 +575,22 @@ function nodeArrayFromDecoratorsArray(
   }
 
   return array;
+}
+
+function createNamedImport(importName: string, moduleName: string): ts.ImportDeclaration {
+  return ts.factory.createImportDeclaration(
+    /* modifiers */ undefined,
+    /* importClause */ ts.factory.createImportClause(
+      /* isTypeOnly */ false,
+      /* name */ undefined,
+      /* namedBindings */ ts.factory.createNamedImports([
+        ts.factory.createImportSpecifier(
+          false,
+          /* name */ ts.factory.createIdentifier(importName),
+          /* propertyName */ ts.factory.createIdentifier('local_' + importName),
+        ),
+      ]),
+    ),
+    /* moduleSpecifier */ ts.factory.createStringLiteral(moduleName),
+  );
 }

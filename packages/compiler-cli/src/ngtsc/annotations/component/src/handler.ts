@@ -41,6 +41,7 @@ import {
   SelectorMatcher,
   TmplAstDeferredBlock,
   ViewEncapsulation,
+  R3InFileDeclaration,
 } from '@angular/compiler';
 import ts from 'typescript';
 
@@ -443,6 +444,7 @@ export class ComponentDecoratorHandler
   analyze(
     node: ClassDeclaration,
     decorator: Readonly<Decorator>,
+    inFileDeclarations: R3InFileDeclaration[],
   ): AnalysisOutput<ComponentAnalysisData> {
     this.perf.eventCount(PerfEvent.AnalyzeComponent);
     const containingFile = node.getSourceFile().fileName;
@@ -868,6 +870,7 @@ export class ComponentDecoratorHandler
           i18nUseExternalIds: this.i18nUseExternalIds,
           relativeContextFilePath,
           rawImports: rawImports !== null ? new o.WrappedNodeExpr(rawImports) : undefined,
+          inFileDeclarations,
         },
         typeCheckMeta: extractDirectiveTypeCheckMeta(node, inputs, this.reflector),
         classMetadata: this.includeClassMetadata

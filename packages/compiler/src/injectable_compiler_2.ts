@@ -142,6 +142,7 @@ export function compileInjectable(
     expression,
     type: createInjectableType(meta),
     statements: result.statements,
+    additionalImports: [],
   };
 }
 

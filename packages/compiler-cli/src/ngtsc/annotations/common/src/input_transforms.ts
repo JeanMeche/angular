@@ -28,6 +28,7 @@ export function compileInputTransformFields(
         statements: [],
         initializer: null,
         deferrableImports: null,
+        additionalImports: [],
       });
     }
   }

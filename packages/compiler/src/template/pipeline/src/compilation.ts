@@ -8,7 +8,7 @@
 
 import {ConstantPool} from '../../../constant_pool';
 import * as o from '../../../output/output_ast';
-import {R3ComponentDeferMetadata} from '../../../render3/view/api';
+import {R3ComponentDeferMetadata, R3InFileDeclaration} from '../../../render3/view/api';
 import * as ir from '../ir';
 
 export enum CompilationJobKind {
@@ -73,6 +73,7 @@ export class ComponentCompilationJob extends CompilationJob {
     readonly i18nUseExternalIds: boolean,
     readonly deferMeta: R3ComponentDeferMetadata,
     readonly allDeferrableDepsFn: o.ReadVarExpr | null,
+    readonly inFileDeclarations: R3InFileDeclaration[],
   ) {
     super(componentName, pool, compatibility);
     this.root = new ViewCompilationUnit(this, this.allocateXrefId(), null);
@@ -95,6 +96,8 @@ export class ComponentCompilationJob extends CompilationJob {
    * reference into the constant pool.
    */
   public contentSelectors: o.Expression | null = null;
+
+  public usedDeclarations: {name: string; moduleName: string}[] = [];
 
   /**
    * Add a `ViewCompilation` for a new embedded view to this compilation.

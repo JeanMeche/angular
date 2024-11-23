@@ -34,7 +34,7 @@ export function compileInjector(meta: R3InjectorMetadata): R3CompiledExpression 
     .importExpr(R3.defineInjector)
     .callFn([definitionMap.toLiteralMap()], undefined, true);
   const type = createInjectorType(meta);
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 export function createInjectorType(meta: R3InjectorMetadata): o.Type {

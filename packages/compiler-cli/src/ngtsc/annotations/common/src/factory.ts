@@ -23,6 +23,7 @@ export function compileNgFactoryDefField(metadata: R3FactoryMetadata): CompileRe
     initializer: res.expression,
     statements: res.statements,
     type: res.type,
+    additionalImports: [],
     deferrableImports: null,
   };
 }
@@ -34,6 +35,7 @@ export function compileDeclareFactory(metadata: R3FactoryMetadata): CompileResul
     initializer: res.expression,
     statements: res.statements,
     type: res.type,
+    additionalImports: [],
     deferrableImports: null,
   };
 }

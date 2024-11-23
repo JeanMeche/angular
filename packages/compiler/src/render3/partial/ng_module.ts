@@ -32,7 +32,7 @@ export function compileDeclareNgModuleFromMetadata(meta: R3NgModuleMetadata): R3
   const expression = o.importExpr(R3.declareNgModule).callFn([definitionMap.toLiteralMap()]);
   const type = createNgModuleType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**

@@ -239,6 +239,8 @@ export class PartialComponentLinkerVersion1<TStatement, TExpression>
       relativeContextFilePath: this.sourceUrl,
       i18nUseExternalIds: false,
       declarations,
+      // TODO:
+      inFileDeclarations: [],
     };
   }
 

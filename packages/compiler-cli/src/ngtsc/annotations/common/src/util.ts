@@ -437,6 +437,7 @@ export function compileResults(
       statements: def.statements,
       type: def.type,
       deferrableImports,
+      additionalImports: def.additionalImports,
     },
   ];
 

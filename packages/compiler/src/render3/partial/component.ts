@@ -74,7 +74,7 @@ export function compileDeclareComponentFromMetadata(
   const expression = o.importExpr(R3.declareComponent).callFn([definitionMap.toLiteralMap()]);
   const type = createComponentType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**

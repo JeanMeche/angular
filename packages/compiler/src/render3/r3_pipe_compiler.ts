@@ -69,7 +69,7 @@ export function compilePipeFromMetadata(metadata: R3PipeMetadata): R3CompiledExp
     .callFn([o.literalMap(definitionMapValues)], undefined, true);
   const type = createPipeType(metadata);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 export function createPipeType(metadata: R3PipeMetadata): o.Type {

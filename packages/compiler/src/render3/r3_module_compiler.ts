@@ -258,7 +258,7 @@ export function compileNgModule(meta: R3NgModuleMetadata): R3CompiledExpression 
     .callFn([definitionMap.toLiteralMap()], undefined, true);
   const type = createNgModuleType(meta);
 
-  return {expression, type, statements};
+  return {expression, type, statements, additionalImports: []};
 }
 
 /**

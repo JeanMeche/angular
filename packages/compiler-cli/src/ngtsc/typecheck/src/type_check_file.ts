@@ -37,6 +37,7 @@ export class TypeCheckFile extends Environment {
     refEmitter: ReferenceEmitter,
     reflector: ReflectionHost,
     compilerHost: Pick<ts.CompilerHost, 'getCanonicalFileName'>,
+    private declarations: string[],
   ) {
     super(
       config,
@@ -74,6 +75,7 @@ export class TypeCheckFile extends Environment {
       domSchemaChecker,
       oobRecorder,
       genericContextBehavior,
+      this.declarations,
     );
     this.tcbStatements.push(fn);
   }
@@ -130,4 +132,59 @@ export class TypeCheckFile extends Environment {
 export function typeCheckFilePath(rootDirs: AbsoluteFsPath[]): AbsoluteFsPath {
   const shortest = rootDirs.concat([]).sort((a, b) => a.length - b.length)[0];
   return join(shortest, '__ng_typecheck__.ts');
+}
+
+export function getTopLevelDeclarations(
+  sourceFile: ts.SourceFile,
+): ({name: string; type: 'var'} | {name: string; type: 'import'; module: string})[] {
+  const symbols: ({name: string; type: 'var'} | {name: string; type: 'import'; module: string})[] =
+    [];
+
+  // Traverse the AST
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && node.importClause) {
+      const importClause = node.importClause;
+
+      // Default import (e.g., `import foo from 'module';`)
+      if (importClause.name) {
+        symbols.push({
+          name: importClause.name.text,
+          type: 'import',
+          module: (node.moduleSpecifier as ts.StringLiteral).text,
+        });
+      }
+
+      // Named imports (e.g., `import { bar, baz } from 'module';`)
+      if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+        for (const element of importClause.namedBindings.elements) {
+          symbols.push({
+            name: element.name.text,
+            type: 'import',
+            module: (node.moduleSpecifier as ts.StringLiteral).text,
+          });
+        }
+      }
+
+      // Namespace import (e.g., `import * as ns from 'module';`)
+      if (importClause.namedBindings && ts.isNamespaceImport(importClause.namedBindings)) {
+        symbols.push({
+          name: importClause.namedBindings.name.text,
+          type: 'import',
+          module: (node.moduleSpecifier as ts.StringLiteral).text,
+        });
+      }
+    }
+
+    if (ts.isDeclarationStatement(node) || ts.isVariableDeclaration(node)) {
+      const name = (node as ts.NamedDeclaration).name;
+      if (name && ts.isIdentifier(name)) {
+        symbols.push({name: name.text, type: 'var'});
+      }
+    }
+
+    ts.forEachChild(node, visit); // Recursively process child nodes
+  };
+
+  visit(sourceFile);
+  return symbols;
 }

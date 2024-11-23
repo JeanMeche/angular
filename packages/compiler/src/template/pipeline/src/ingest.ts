@@ -14,7 +14,11 @@ import {splitNsName} from '../../../ml_parser/tags';
 import * as o from '../../../output/output_ast';
 import {ParseSourceSpan} from '../../../parse_util';
 import * as t from '../../../render3/r3_ast';
-import {DeferBlockDepsEmitMode, R3ComponentDeferMetadata} from '../../../render3/view/api';
+import {
+  DeferBlockDepsEmitMode,
+  R3ComponentDeferMetadata,
+  R3InFileDeclaration,
+} from '../../../render3/view/api';
 import {icuFromI18nMessage} from '../../../render3/view/i18n/util';
 import {DomElementSchemaRegistry} from '../../../schema/dom_element_schema_registry';
 import {BindingParser} from '../../../template_parser/binding_parser';
@@ -58,6 +62,7 @@ export function ingestComponent(
   i18nUseExternalIds: boolean,
   deferMeta: R3ComponentDeferMetadata,
   allDeferrableDepsFn: o.ReadVarExpr | null,
+  inFileDeclarations: R3InFileDeclaration[],
 ): ComponentCompilationJob {
   const job = new ComponentCompilationJob(
     componentName,
@@ -67,6 +72,7 @@ export function ingestComponent(
     i18nUseExternalIds,
     deferMeta,
     allDeferrableDepsFn,
+    inFileDeclarations,
   );
   ingestNodes(job.root, template);
   return job;

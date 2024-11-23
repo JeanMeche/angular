@@ -91,6 +91,7 @@ export class ConstantPool {
   private literals = new Map<string, FixupExpression>();
   private literalFactories = new Map<string, o.Expression>();
   private sharedConstants = new Map<string, o.Expression>();
+  private imports = ['foo', 'bar'];
 
   /**
    * Constant pool also tracks claimed names from {@link uniqueName}.

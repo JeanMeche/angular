@@ -35,7 +35,7 @@ export function compileDeclareDirectiveFromMetadata(
   const expression = o.importExpr(R3.declareDirective).callFn([definitionMap.toLiteralMap()]);
   const type = createDirectiveType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**

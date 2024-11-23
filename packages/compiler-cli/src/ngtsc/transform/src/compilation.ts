@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {ConstantPool} from '@angular/compiler';
+import {ConstantPool, R3InFileDeclaration} from '@angular/compiler';
 import ts from 'typescript';
 
 import {SourceFileTypeIdentifier} from '../../core/api';
@@ -170,9 +170,11 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
       return;
     }
 
+    const declarations = getTopLevelDeclarations(sf);
+
     const visit = (node: ts.Node): void => {
       if (this.reflector.isClass(node)) {
-        this.analyzeClass(node, preanalyze ? promises : null);
+        this.analyzeClass(node, preanalyze ? promises : null, declarations);
       }
       ts.forEachChild(node, visit);
     };
@@ -411,7 +413,11 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     return symbol;
   }
 
-  private analyzeClass(clazz: ClassDeclaration, preanalyzeQueue: Promise<void>[] | null): void {
+  private analyzeClass(
+    clazz: ClassDeclaration,
+    preanalyzeQueue: Promise<void>[] | null,
+    inFileDeclarations: R3InFileDeclaration[],
+  ): void {
     const traits = this.scanClassForTraits(clazz);
 
     if (traits === null) {
@@ -420,7 +426,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     }
 
     for (const trait of traits) {
-      const analyze = () => this.analyzeTrait(clazz, trait);
+      const analyze = () => this.analyzeTrait(clazz, trait, inFileDeclarations);
 
       let preanalysis: Promise<void> | null = null;
       if (preanalyzeQueue !== null && trait.handler.preanalyze !== undefined) {
@@ -448,6 +454,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
   private analyzeTrait(
     clazz: ClassDeclaration,
     trait: Trait<unknown, unknown, SemanticSymbol | null, unknown>,
+    inFileDeclarations: R3InFileDeclaration[],
   ): void {
     if (trait.state !== TraitState.Pending) {
       throw new Error(
@@ -462,7 +469,7 @@ export class TraitCompiler implements ProgramTypeCheckAdapter {
     // Attempt analysis. This could fail with a `FatalDiagnosticError`; catch it if it does.
     let result: AnalysisOutput<unknown>;
     try {
-      result = trait.handler.analyze(clazz, trait.detected.metadata);
+      result = trait.handler.analyze(clazz, trait.detected.metadata, inFileDeclarations);
     } catch (err) {
       if (err instanceof FatalDiagnosticError) {
         trait.toAnalyzed(null, [err.toDiagnostic()], null);
@@ -807,4 +814,59 @@ function containsErrors(diagnostics: ts.Diagnostic[] | null): boolean {
     diagnostics !== null &&
     diagnostics.some((diag) => diag.category === ts.DiagnosticCategory.Error)
   );
+}
+
+export function getTopLevelDeclarations(
+  sourceFile: ts.SourceFile,
+): ({name: string; type: 'var'} | {name: string; type: 'import'; module: string})[] {
+  const symbols: ({name: string; type: 'var'} | {name: string; type: 'import'; module: string})[] =
+    [];
+
+  // Traverse the AST
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && node.importClause) {
+      const importClause = node.importClause;
+
+      // Default import (e.g., `import foo from 'module';`)
+      if (importClause.name) {
+        symbols.push({
+          name: importClause.name.text,
+          type: 'import',
+          module: (node.moduleSpecifier as ts.StringLiteral).text,
+        });
+      }
+
+      // Named imports (e.g., `import { bar, baz } from 'module';`)
+      if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+        for (const element of importClause.namedBindings.elements) {
+          symbols.push({
+            name: element.name.text,
+            type: 'import',
+            module: (node.moduleSpecifier as ts.StringLiteral).text,
+          });
+        }
+      }
+
+      // Namespace import (e.g., `import * as ns from 'module';`)
+      if (importClause.namedBindings && ts.isNamespaceImport(importClause.namedBindings)) {
+        symbols.push({
+          name: importClause.namedBindings.name.text,
+          type: 'import',
+          module: (node.moduleSpecifier as ts.StringLiteral).text,
+        });
+      }
+    }
+
+    if (ts.isDeclarationStatement(node) || ts.isVariableDeclaration(node)) {
+      const name = (node as ts.NamedDeclaration).name;
+      if (name && ts.isIdentifier(name)) {
+        symbols.push({name: name.text, type: 'var'});
+      }
+    }
+
+    ts.forEachChild(node, visit); // Recursively process child nodes
+  };
+
+  visit(sourceFile);
+  return symbols;
 }

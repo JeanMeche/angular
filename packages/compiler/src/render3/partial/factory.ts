@@ -36,5 +36,6 @@ export function compileDeclareFactoryFunction(meta: R3FactoryMetadata): R3Compil
     expression: o.importExpr(R3.declareFactory).callFn([definitionMap.toLiteralMap()]),
     statements: [],
     type: createFactoryType(meta),
+    additionalImports: [],
   };
 }

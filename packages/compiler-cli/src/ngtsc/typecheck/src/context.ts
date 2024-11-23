@@ -45,7 +45,7 @@ import {TypeCheckShimGenerator} from './shim';
 import {TemplateSourceManager} from './source';
 import {requiresInlineTypeCheckBlock, TcbInliningRequirement} from './tcb_util';
 import {generateTypeCheckBlock, TcbGenericContextBehavior} from './type_check_block';
-import {TypeCheckFile} from './type_check_file';
+import {TypeCheckFile, getTopLevelDeclarations} from './type_check_file';
 import {generateInlineTypeCtor, requiresInlineTypeCtor} from './type_constructor';
 
 export interface ShimTypeCheckingData {
@@ -243,8 +243,9 @@ export class TypeCheckContextImpl implements TypeCheckContext {
       return;
     }
 
-    const fileData = this.dataForFile(ref.node.getSourceFile());
-    const shimData = this.pendingShimForComponent(ref.node);
+    const sourceFile = ref.node.getSourceFile();
+    const fileData = this.dataForFile(sourceFile);
+    const shimData = this.pendingShimForComponent(sourceFile);
     const templateId = fileData.sourceManager.getTemplateId(ref.node);
 
     const templateDiagnostics: TemplateDiagnostic[] = [];
@@ -523,9 +524,11 @@ export class TypeCheckContextImpl implements TypeCheckContext {
     fileData.hasInlines = true;
   }
 
-  private pendingShimForComponent(node: ts.ClassDeclaration): PendingShimData {
-    const fileData = this.dataForFile(node.getSourceFile());
-    const shimPath = TypeCheckShimGenerator.shimFor(absoluteFromSourceFile(node.getSourceFile()));
+  private pendingShimForComponent(sourceFile: ts.SourceFile): PendingShimData {
+    const fileData = this.dataForFile(sourceFile);
+    const shimPath = TypeCheckShimGenerator.shimFor(absoluteFromSourceFile(sourceFile));
+    const declarations = getTopLevelDeclarations(sourceFile);
+
     if (!fileData.shimData.has(shimPath)) {
       fileData.shimData.set(shimPath, {
         domSchemaChecker: new RegistryDomSchemaChecker(fileData.sourceManager),
@@ -536,6 +539,7 @@ export class TypeCheckContextImpl implements TypeCheckContext {
           this.refEmitter,
           this.reflector,
           this.compilerHost,
+          declarations.map((decl) => decl.name),
         ),
         templates: new Map<TemplateId, TemplateData>(),
       });
@@ -650,6 +654,7 @@ class InlineTcbOp implements Op {
       this.domSchemaChecker,
       this.oobRecorder,
       TcbGenericContextBehavior.CopyClassNodes,
+      [], // TODO
     );
 
     return printer.printNode(ts.EmitHint.Unspecified, fn, sf);

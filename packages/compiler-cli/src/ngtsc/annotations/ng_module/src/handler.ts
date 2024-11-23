@@ -1046,6 +1046,7 @@ export class NgModuleDecoratorHandler
         statements: ngModuleDef.statements,
         type: ngModuleDef.type,
         deferrableImports: null,
+        additionalImports: [],
       },
       {
         name: 'ɵinj',
@@ -1053,6 +1054,7 @@ export class NgModuleDecoratorHandler
         statements: injectorDef.statements,
         type: injectorDef.type,
         deferrableImports: null,
+        additionalImports: [],
       },
     ];
     return res;

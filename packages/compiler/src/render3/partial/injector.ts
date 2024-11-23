@@ -28,7 +28,7 @@ export function compileDeclareInjectorFromMetadata(meta: R3InjectorMetadata): R3
   const expression = o.importExpr(R3.declareInjector).callFn([definitionMap.toLiteralMap()]);
   const type = createInjectorType(meta);
 
-  return {expression, type, statements: []};
+  return {expression, type, statements: [], additionalImports: []};
 }
 
 /**

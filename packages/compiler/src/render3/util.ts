@@ -34,6 +34,7 @@ export interface R3CompiledExpression {
   expression: o.Expression;
   type: o.Type;
   statements: o.Statement[];
+  additionalImports: {specifier: string; moduleName: string}[];
 }
 
 const ANIMATE_SYMBOL_PREFIX = '@';

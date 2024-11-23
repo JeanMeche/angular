@@ -294,6 +294,8 @@ export interface R3ComponentMetadata<DeclarationT extends R3TemplateDependency>
    * not be set. If component has empty array imports then this field is not set.
    */
   rawImports?: o.Expression;
+
+  inFileDeclarations: R3InFileDeclaration[];
 }
 
 /**
@@ -562,3 +564,7 @@ export interface R3DeferPerComponentDependency {
    */
   isDefaultImport: boolean;
 }
+
+export type R3InFileDeclaration =
+  | {name: string; type: 'var'}
+  | {name: string; type: 'import'; module: string};
