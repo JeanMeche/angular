@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HttpTransferCacheOptions, ɵwithHttpTransferCache} from '@angular/common/http';
+import {HttpTransferCacheOptions, ɵwithHttpTransferCache} from '@angular/common/http/rxjs-interop';
 import {
   ENVIRONMENT_INITIALIZER,
   EnvironmentProviders,

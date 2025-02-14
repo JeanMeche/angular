@@ -10,23 +10,22 @@ import {inject, Injectable, InjectionToken, NgZone} from '@angular/core';
 import {Observable, Observer} from 'rxjs';
 
 import {HttpBackend} from './backend';
-import {HttpHeaders} from './headers';
 import {
-  ACCEPT_HEADER,
-  ACCEPT_HEADER_VALUE,
-  CONTENT_TYPE_HEADER,
+  HttpHeaders,
   HttpRequest,
-  X_REQUEST_URL_HEADER,
-} from './request';
-import {
-  HTTP_STATUS_CODE_OK,
   HttpDownloadProgressEvent,
   HttpErrorResponse,
   HttpEvent,
   HttpEventType,
   HttpHeaderResponse,
   HttpResponse,
-} from './response';
+  ɵX_REQUEST_URL_HEADER as X_REQUEST_URL_HEADER,
+  ɵCONTENT_TYPE_HEADER as CONTENT_TYPE_HEADER,
+  ɵACCEPT_HEADER as ACCEPT_HEADER,
+  ɵACCEPT_HEADER_VALUE as ACCEPT_HEADER_VALUE,
+  ɵHTTP_STATUS_CODE_OK as HTTP_STATUS_CODE_OK,
+  ɵFetchFactory as FetchFactory,
+} from '@angular/common/http';
 
 const XSSI_PREFIX = /^\)\]\}',?\n/;
 
@@ -261,7 +260,7 @@ export class FetchBackend implements HttpBackend {
     const credentials: RequestCredentials | undefined = req.withCredentials ? 'include' : undefined;
 
     // Setting all the requested headers.
-    req.headers.forEach((name, values) => (headers[name] = values.join(',')));
+    (req.headers as any).forEach((name: string, values: string[]) => (headers[name] = values.join(',')));
 
     // Add an Accept header if one isn't present already.
     if (!req.headers.has(ACCEPT_HEADER)) {
@@ -295,13 +294,6 @@ export class FetchBackend implements HttpBackend {
 
     return chunksAll;
   }
-}
-
-/**
- * Abstract class to provide a mocked implementation of `fetch()`
- */
-export abstract class FetchFactory {
-  abstract fetch: typeof fetch;
 }
 
 function noop(): void {}

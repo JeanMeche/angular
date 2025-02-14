@@ -6,7 +6,8 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HttpBackend, HttpEvent, HttpEventType, HttpRequest} from '@angular/common/http';
+import {HttpEvent, HttpEventType, HttpRequest} from '@angular/common/http';
+import {HttpBackend} from '@angular/common/http/rxjs-interop';
 import {Injectable} from '@angular/core';
 import {Observable, Observer} from 'rxjs';
 

@@ -6,22 +6,27 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HttpEvent, HttpEventType, HttpRequest, HttpResponse} from '@angular/common/http';
-import {TestBed} from '@angular/core/testing';
-import {Observable, of, Subject} from 'rxjs';
-import {catchError, retry, scan, skip, take, toArray} from 'rxjs/operators';
-
 import {
-  HttpClient,
+  HttpEvent,
+  HttpEventType,
+  HttpRequest,
+  HttpResponse,
+  ɵFetchFactory as FetchFactory,
   HttpDownloadProgressEvent,
   HttpErrorResponse,
   HttpHeaderResponse,
   HttpParams,
   HttpStatusCode,
+} from '@angular/common/http';
+import {
+  HttpClient,
   provideHttpClient,
   withFetch,
-} from '../public_api';
-import {FetchBackend, FetchFactory} from '../src/fetch';
+  FetchBackend,
+} from '@angular/common/http/rxjs-interop';
+import {TestBed} from '@angular/core/testing';
+import {Observable, of, Subject} from 'rxjs';
+import {catchError, retry, scan, skip, take, toArray} from 'rxjs/operators';
 
 function trackEvents(obs: Observable<any>): Promise<any[]> {
   return obs

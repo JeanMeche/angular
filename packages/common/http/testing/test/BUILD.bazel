@@ -17,6 +17,7 @@ ts_library(
     visibility = ["//:__pkg__"],
     deps = [
         "//packages/common/http",
+        "//packages/common/http/rxjs-interop",
         "//packages/common/http/testing",
         "@npm//rxjs",
     ],

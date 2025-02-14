@@ -13,7 +13,7 @@ import {
   JSONP_ERR_WRONG_METHOD,
   JSONP_ERR_WRONG_RESPONSE_TYPE,
   JsonpClientBackend,
-} from '@angular/common/http/src/jsonp';
+} from '@angular/common/http/rxjs-interop/src/jsonp';
 import {HttpRequest} from '@angular/common/http/src/request';
 import {HttpErrorResponse, HttpEventType} from '@angular/common/http/src/response';
 import {toArray} from 'rxjs/operators';

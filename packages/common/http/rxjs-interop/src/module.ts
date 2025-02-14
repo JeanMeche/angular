@@ -10,13 +10,6 @@ import {ModuleWithProviders, NgModule} from '@angular/core';
 
 import {HTTP_INTERCEPTORS} from './interceptor';
 import {
-  provideHttpClient,
-  withInterceptorsFromDi,
-  withJsonpSupport,
-  withNoXsrfProtection,
-  withXsrfConfiguration,
-} from './provider';
-import {
   HttpXsrfCookieExtractor,
   HttpXsrfInterceptor,
   HttpXsrfTokenExtractor,
@@ -24,6 +17,7 @@ import {
   XSRF_DEFAULT_HEADER_NAME,
   XSRF_ENABLED,
 } from './xsrf';
+import { provideHttpClient, withInterceptorsFromDi, withJsonpSupport, withNoXsrfProtection, withXsrfConfiguration } from './provider';
 
 /**
  * Configures XSRF protection support for outgoing requests.

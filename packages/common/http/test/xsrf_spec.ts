@@ -14,7 +14,7 @@ import {
   HttpXsrfTokenExtractor,
   XSRF_ENABLED,
   XSRF_HEADER_NAME,
-} from '@angular/common/http/src/xsrf';
+} from '@angular/common/http/rxjs-interop/src/xsrf';
 import {HttpClientTestingBackend} from '@angular/common/http/testing/src/backend';
 import {TestBed} from '@angular/core/testing';
 

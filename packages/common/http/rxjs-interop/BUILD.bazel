@@ -1,12 +1,12 @@
-load("//tools:defaults.bzl", "ng_module")
 load("//adev/shared-docs/pipeline/api-gen:generate_api_docs.bzl", "generate_api_docs")
+load("//tools:defaults.bzl", "ng_module", "tsec_test")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["package.json"])
 
 ng_module(
-    name = "testing",
+    name = "rxjs-interop",
     srcs = glob(
         [
             "*.ts",
@@ -14,11 +14,16 @@ ng_module(
         ],
     ),
     deps = [
+        "//packages/common",
         "//packages/common/http",
-        "//packages/common/http/rxjs-interop",
         "//packages/core",
-        "@npm//rxjs",
     ],
+)
+
+tsec_test(
+    name = "tsec_test",
+    target = "rxjs-interop",
+    tsconfig = "//packages:tsec_config",
 )
 
 filegroup(
@@ -30,11 +35,11 @@ filegroup(
 )
 
 generate_api_docs(
-    name = "http_testing_docs",
+    name = "common_http_rxjs_docs",
     srcs = [
         ":files_for_docgen",
         "//packages:common_files_and_deps_for_docs",
     ],
     entry_point = ":index.ts",
-    module_name = "@angular/common/http/testing",
+    module_name = "@angular/common/http/rxjs-interop",
 )

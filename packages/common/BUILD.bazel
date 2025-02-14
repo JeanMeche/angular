@@ -61,6 +61,7 @@ ng_package(
     deps = [
         "//packages/common",
         "//packages/common/http",
+        "//packages/common/http/rxjs-interop",
         "//packages/common/http/testing",
         "//packages/common/testing",
         "//packages/common/upgrade",

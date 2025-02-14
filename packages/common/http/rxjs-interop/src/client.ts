@@ -11,12 +11,8 @@ import {Observable, of} from 'rxjs';
 import {concatMap, filter, map} from 'rxjs/operators';
 
 import {HttpHandler} from './backend';
-import {HttpContext} from './context';
-import {HttpHeaders} from './headers';
-import {HttpParams, HttpParamsOptions} from './params';
-import {HttpRequest} from './request';
-import {HttpEvent, HttpResponse} from './response';
-import {RuntimeErrorCode} from './errors';
+import {HttpContext, HttpHeaders, HttpParams, HttpParamsOptions, HttpRequest, HttpEvent, HttpResponse} from '@angular/common/http';
+import {RuntimeErrorCode} from '../../src/errors';
 
 /**
  * Constructs an instance of `HttpRequestOptions<T>` from a source `HttpMethodOptions` and

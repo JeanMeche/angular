@@ -19,9 +19,8 @@ import {
 import {Observable} from 'rxjs';
 
 import {HttpHandler} from './backend';
-import {HttpHandlerFn, HttpInterceptor} from './interceptor';
-import {HttpRequest} from './request';
-import {HttpEvent} from './response';
+import {HttpEvent, HttpHandlerFn, HttpRequest} from '@angular/common/http';
+import {HttpInterceptor} from './interceptor';
 
 export const XSRF_ENABLED = new InjectionToken<boolean>(ngDevMode ? 'XSRF_ENABLED' : '');
 
@@ -100,7 +99,7 @@ export function xsrfInterceptorFn(
     lcUrl.startsWith('http://') ||
     lcUrl.startsWith('https://')
   ) {
-    return next(req);
+    return next(req) as Observable<HttpEvent<unknown>>;
   }
 
   const token = inject(HttpXsrfTokenExtractor).getToken();
@@ -110,7 +109,7 @@ export function xsrfInterceptorFn(
   if (token != null && !req.headers.has(headerName)) {
     req = req.clone({headers: req.headers.set(headerName, token)});
   }
-  return next(req);
+  return next(req) as Observable<HttpEvent<unknown>>;
 }
 
 /**

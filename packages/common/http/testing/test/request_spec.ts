@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HttpClient} from '@angular/common/http';
+import {HttpClient} from '@angular/common/http/rxjs-interop';
 import {HttpClientTestingBackend} from '@angular/common/http/testing/src/backend';
 
 describe('HttpClient TestRequest', () => {

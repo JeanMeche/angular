@@ -6,7 +6,8 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HttpRequest} from '@angular/common/http/src/request';
+import {HttpRequest} from '@angular/common/http';
+import {HttpXhrBackend} from '@angular/common/http/rxjs-interop';
 import {
   HttpDownloadProgressEvent,
   HttpErrorResponse,
@@ -18,7 +19,6 @@ import {
   HttpStatusCode,
   HttpUploadProgressEvent,
 } from '@angular/common/http/src/response';
-import {HttpXhrBackend} from '@angular/common/http/src/xhr';
 import {Observable} from 'rxjs';
 import {toArray} from 'rxjs/operators';
 

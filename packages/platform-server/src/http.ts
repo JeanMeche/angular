@@ -7,12 +7,8 @@
  */
 
 import {PlatformLocation, XhrFactory} from '@angular/common';
-import {
-  HttpEvent,
-  HttpHandlerFn,
-  HttpRequest,
-  ɵHTTP_ROOT_INTERCEPTOR_FNS as HTTP_ROOT_INTERCEPTOR_FNS,
-} from '@angular/common/http';
+import {HttpEvent, HttpHandlerFn, HttpRequest} from '@angular/common/http';
+import {ɵHTTP_ROOT_INTERCEPTOR_FNS as HTTP_ROOT_INTERCEPTOR_FNS} from '@angular/common/http/rxjs-interop';
 import {inject, Injectable, Provider} from '@angular/core';
 import {Observable} from 'rxjs';
 
@@ -48,7 +44,7 @@ function relativeUrlsTransformerInterceptorFn(
   const platformLocation = inject(PlatformLocation);
   const {href, protocol, hostname, port} = platformLocation;
   if (!protocol.startsWith('http')) {
-    return next(request);
+    return next(request) as Observable<HttpEvent<unknown>>;
   }
 
   let urlPrefix = `${protocol}//${hostname}`;
@@ -60,7 +56,7 @@ function relativeUrlsTransformerInterceptorFn(
   const baseUrl = new URL(baseHref, urlPrefix);
   const newUrl = new URL(request.url, baseUrl).toString();
 
-  return next(request.clone({url: newUrl}));
+  return next(request.clone({url: newUrl})) as Observable<HttpEvent<unknown>>;
 }
 
 export const SERVER_HTTP_PROVIDERS: Provider[] = [

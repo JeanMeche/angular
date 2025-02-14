@@ -8,6 +8,14 @@
 
 import {DOCUMENT} from '@angular/common';
 import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpResponse,
+  ɵHTTP_STATUS_CODE_OK as HTTP_STATUS_CODE_OK,
+  HttpEventType,
+  HttpRequest,
+} from '@angular/common/http';
+import {
   EnvironmentInjector,
   Inject,
   inject,
@@ -16,16 +24,7 @@ import {
 } from '@angular/core';
 import {Observable, Observer} from 'rxjs';
 
-import {HttpBackend, HttpHandler} from './backend';
-import {HttpHandlerFn} from './interceptor';
-import {HttpRequest} from './request';
-import {
-  HTTP_STATUS_CODE_OK,
-  HttpErrorResponse,
-  HttpEvent,
-  HttpEventType,
-  HttpResponse,
-} from './response';
+import {HttpBackend} from './backend';
 
 // Every request made through JSONP needs a callback name that's unique across the
 // whole page. Each request is assigned an id and the callback name is constructed
@@ -270,7 +269,7 @@ export class JsonpClientBackend implements HttpBackend {
  */
 export function jsonpInterceptorFn(
   req: HttpRequest<unknown>,
-  next: HttpHandlerFn,
+  next: (req: HttpRequest<unknown>) => Observable<HttpEvent<unknown>>,
 ): Observable<HttpEvent<unknown>> {
   if (req.method === 'JSONP') {
     return inject(JsonpClientBackend).handle(req as HttpRequest<never>);
@@ -299,7 +298,10 @@ export class JsonpInterceptor {
    * if no interceptors remain in the chain.
    * @returns An observable of the event stream.
    */
-  intercept(initialRequest: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(
+    initialRequest: HttpRequest<any>,
+    next: {handle: (req: HttpRequest<any>) => Observable<HttpEvent<any>>},
+  ): Observable<HttpEvent<any>> {
     return runInInjectionContext(this.injector, () =>
       jsonpInterceptorFn(initialRequest, (downstreamRequest) => next.handle(downstreamRequest)),
     );

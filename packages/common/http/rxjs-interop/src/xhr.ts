@@ -12,27 +12,25 @@ import {from, Observable, Observer, of} from 'rxjs';
 import {switchMap} from 'rxjs/operators';
 
 import {HttpBackend} from './backend';
-import {RuntimeErrorCode} from './errors';
-import {HttpHeaders} from './headers';
 import {
-  ACCEPT_HEADER,
-  ACCEPT_HEADER_VALUE,
-  CONTENT_TYPE_HEADER,
-  HttpRequest,
-  X_REQUEST_URL_HEADER,
-} from './request';
-import {
-  HTTP_STATUS_CODE_NO_CONTENT,
-  HTTP_STATUS_CODE_OK,
   HttpDownloadProgressEvent,
   HttpErrorResponse,
   HttpEvent,
   HttpEventType,
   HttpHeaderResponse,
-  HttpJsonParseError,
+  HttpHeaders,
+  HttpRequest,
   HttpResponse,
   HttpUploadProgressEvent,
-} from './response';
+  ɵRuntimeErrorCode as RuntimeErrorCode,
+  ɵX_REQUEST_URL_HEADER as X_REQUEST_URL_HEADER,
+  ɵACCEPT_HEADER as ACCEPT_HEADER,
+  ɵACCEPT_HEADER_VALUE as ACCEPT_HEADER_VALUE,
+  ɵCONTENT_TYPE_HEADER as CONTENT_TYPE_HEADER,
+  ɵHTTP_STATUS_CODE_NO_CONTENT as HTTP_STATUS_CODE_NO_CONTENT,
+  ɵHTTP_STATUS_CODE_OK as HTTP_STATUS_CODE_OK,
+  ɵHttpJsonParseError as HttpJsonParseError,
+} from '@angular/common/http';
 
 const XSSI_PREFIX = /^\)\]\}',?\n/;
 
@@ -100,7 +98,7 @@ export class HttpXhrBackend implements HttpBackend {
           }
 
           // Add all the requested headers.
-          req.headers.forEach((name, values) => xhr.setRequestHeader(name, values.join(',')));
+          (req.headers as any).forEach((name:string, values: string[]) => xhr.setRequestHeader(name, values.join(',')));
 
           // Add an Accept header if one isn't present already.
           if (!req.headers.has(ACCEPT_HEADER)) {

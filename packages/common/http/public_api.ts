@@ -6,39 +6,25 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-export {HttpBackend, HttpHandler} from './src/backend';
-export {HttpClient} from './src/client';
 export {HttpContext, HttpContextToken} from './src/context';
-export {FetchBackend} from './src/fetch';
 export {HttpHeaders} from './src/headers';
-export {
-  HTTP_INTERCEPTORS,
-  HttpHandlerFn,
-  HttpInterceptor,
-  HttpInterceptorFn,
-  HttpInterceptorHandler as ɵHttpInterceptorHandler,
-  HttpInterceptorHandler as ɵHttpInterceptingHandler,
-} from './src/interceptor';
-export {JsonpClientBackend, JsonpInterceptor} from './src/jsonp';
-export {HttpClientJsonpModule, HttpClientModule, HttpClientXsrfModule} from './src/module';
+
 export {
   HttpParameterCodec,
   HttpParams,
   HttpParamsOptions,
   HttpUrlEncodingCodec,
 } from './src/params';
+export {HttpBackend2, PromiseFetchBackend, ObservableLike, FetchFactory as ɵFetchFactory} from './src/backend';
+export {Http} from './src/http';
 export {
-  HttpFeature,
-  HttpFeatureKind,
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-  withInterceptorsFromDi,
-  withJsonpSupport,
-  withNoXsrfProtection,
-  withRequestsMadeViaParent,
-  withXsrfConfiguration,
-} from './src/provider';
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HTTP_INTERCEPTOR_FNS,
+  HTTP_ROOT_INTERCEPTOR_FNS as ɵHTTP_ROOT_INTERCEPTOR_FNS,
+  REQUESTS_CONTRIBUTE_TO_STABILITY as ɵREQUESTS_CONTRIBUTE_TO_STABILITY,
+  ObservableInterceptorFn,
+} from './src/interceptor';
 export {HttpRequest} from './src/request';
 export {
   HttpDownloadProgressEvent,
@@ -53,14 +39,16 @@ export {
   HttpStatusCode,
   HttpUploadProgressEvent,
   HttpUserEvent,
+  HTTP_STATUS_CODE_NO_CONTENT as ɵHTTP_STATUS_CODE_NO_CONTENT,
+  HTTP_STATUS_CODE_OK as ɵHTTP_STATUS_CODE_OK,
+  HttpJsonParseError as ɵHttpJsonParseError,
 } from './src/response';
-export {
-  HttpTransferCacheOptions,
-  withHttpTransferCache as ɵwithHttpTransferCache,
-  HTTP_TRANSFER_CACHE_ORIGIN_MAP,
-} from './src/transfer_cache';
-export {HttpXhrBackend} from './src/xhr';
-export {HttpXsrfTokenExtractor} from './src/xsrf';
 
-// Private exports
-export * from './src/private_export';
+export {RuntimeErrorCode as ɵRuntimeErrorCode} from './src/errors';
+
+export {
+  ACCEPT_HEADER as ɵACCEPT_HEADER,
+  ACCEPT_HEADER_VALUE as ɵACCEPT_HEADER_VALUE,
+  CONTENT_TYPE_HEADER as ɵCONTENT_TYPE_HEADER,
+  X_REQUEST_URL_HEADER as ɵX_REQUEST_URL_HEADER,
+} from './src/request';

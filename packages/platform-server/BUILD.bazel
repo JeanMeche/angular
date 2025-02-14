@@ -17,6 +17,7 @@ ng_module(
         ":bundled_domino_lib",
         "//packages/common",
         "//packages/common/http",
+        "//packages/common/http/rxjs-interop",
         "//packages/compiler",
         "//packages/core",
         "//packages/platform-browser",

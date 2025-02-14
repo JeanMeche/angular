@@ -7,13 +7,15 @@
  */
 
 import {DOCUMENT} from '@angular/common';
+import {HttpResponse} from '@angular/common/http';
+import {HttpClient, provideHttpClient} from '@angular/common/http/rxjs-interop';
+
 import {ApplicationRef, Component, Injectable, PLATFORM_ID} from '@angular/core';
 import {makeStateKey, TransferState} from '@angular/core/src/transfer_state';
 import {fakeAsync, flush, TestBed} from '@angular/core/testing';
 import {withBody} from '@angular/private/testing';
 import {BehaviorSubject} from 'rxjs';
 
-import {HttpClient, HttpResponse, provideHttpClient} from '../public_api';
 import {
   BODY,
   HEADERS,
@@ -23,7 +25,7 @@ import {
   STATUS_TEXT,
   REQ_URL,
   withHttpTransferCache,
-} from '../src/transfer_cache';
+} from '../rxjs-interop/src/transfer_cache';
 import {HttpTestingController, provideHttpClientTesting} from '../testing';
 import {PLATFORM_BROWSER_ID, PLATFORM_SERVER_ID} from '../../src/platform_id';
 

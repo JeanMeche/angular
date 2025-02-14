@@ -23,12 +23,16 @@ import {
 import {Observable, of} from 'rxjs';
 import {tap} from 'rxjs/operators';
 
-import {RuntimeErrorCode} from './errors';
-import {HttpHeaders} from './headers';
-import {HTTP_ROOT_INTERCEPTOR_FNS, HttpHandlerFn} from './interceptor';
-import {HttpRequest} from './request';
-import {HttpEvent, HttpResponse} from './response';
-import {HttpParams} from './params';
+import {
+  HttpParams,
+  HttpEvent,
+  HttpResponse,
+  HttpRequest,
+  HttpHeaders,
+  ɵRuntimeErrorCode as RuntimeErrorCode,
+  HttpHandlerFn,
+} from '@angular/common/http';
+import {HTTP_ROOT_INTERCEPTOR_FNS} from './interceptor';
 
 /**
  * Options to configure how TransferCache should be used to cache requests made via HttpClient.
@@ -139,7 +143,7 @@ export function transferCacheInterceptorFn(
     (!globalOptions.includeRequestsWithAuthHeaders && hasAuthHeaders(req)) ||
     globalOptions.filter?.(req) === false
   ) {
-    return next(req);
+    return next(req) as Observable<HttpEvent<unknown>>;
   }
 
   const transferState = inject(TransferState);

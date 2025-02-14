@@ -59,6 +59,7 @@ DOCS_ENTRYPOINTS = [
     "animations/browser/testing",
     "common",
     "common/http",
+    "common/http/rxjs-interop",
     "common/http/testing",
     "common/testing",
     "common/upgrade",

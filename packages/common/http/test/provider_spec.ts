@@ -7,20 +7,27 @@
  */
 
 import {DOCUMENT, XhrFactory} from '@angular/common';
+import {HttpEvent, HttpInterceptorFn, HttpRequest, HttpResponse} from '@angular/common/http';
 import {
-  FetchBackend,
+  HttpInterceptor,
   HTTP_INTERCEPTORS,
   HttpBackend,
   HttpClient,
   HttpClientModule,
-  HttpEvent,
+  HttpFeature,
+  HttpFeatureKind,
   HttpHandler,
-  HttpInterceptor,
-  HttpRequest,
-  HttpResponse,
   HttpXhrBackend,
   JsonpClientBackend,
-} from '@angular/common/http';
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+  withInterceptorsFromDi,
+  withJsonpSupport,
+  withNoXsrfProtection,
+  withRequestsMadeViaParent,
+  withXsrfConfiguration,
+} from '@angular/common/http/rxjs-interop';
 import {
   HttpClientTestingModule,
   HttpTestingController,
@@ -38,19 +45,8 @@ import {
 import {TestBed} from '@angular/core/testing';
 import {EMPTY, Observable, from} from 'rxjs';
 
-import {HttpInterceptorFn, resetFetchBackendWarningFlag} from '../src/interceptor';
-import {
-  HttpFeature,
-  HttpFeatureKind,
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-  withInterceptorsFromDi,
-  withJsonpSupport,
-  withNoXsrfProtection,
-  withRequestsMadeViaParent,
-  withXsrfConfiguration,
-} from '../src/provider';
+import {resetFetchBackendWarningFlag} from '../rxjs-interop/src/interceptor';
+import {FetchBackend} from '../rxjs-interop/src/fetch';
 
 describe('without provideHttpClientTesting', () => {
   it('should contribute to stability', async () => {
