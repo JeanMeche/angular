@@ -124,14 +124,23 @@ const indexTree = <T extends DevToolsNode<DirectiveInstanceType, ComponentInstan
   parentPosition: number[] = [],
 ): IndexedNode => {
   const position = parentPosition.concat([idx]);
+
+  const children: IndexedNode[] = [];
+  node.children.forEach((n,i) => {
+    if (n.nativeElement) {
+      children.push(indexTree(n, i, position));
+    }
+  });
+
   return {
     position,
     element: node.element,
     component: node.component,
     directives: node.directives.map((d) => ({position, ...d})),
-    children: node.children.map((n, i) => indexTree(n, i, position)),
+    children,
     nativeElement: node.nativeElement,
     hydration: node.hydration,
+    defer: node.defer,
   } as IndexedNode;
 };
 
