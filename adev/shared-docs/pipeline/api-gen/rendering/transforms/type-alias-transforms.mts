@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {TypeAliasEntry} from '../entities.mjs';
+import {TypeAliasEntry} from '../../entities/entities.mjs';
 import {TypeAliasEntryRenderable} from '../entities/renderables.mjs';
 import {addRenderableCodeToc} from './code-transforms.mjs';
 import {

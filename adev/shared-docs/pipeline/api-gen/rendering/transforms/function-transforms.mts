@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {FunctionEntry, FunctionSignatureMetadata} from '../entities.mjs';
+import {FunctionEntry, FunctionSignatureMetadata} from '../../entities/entities.mjs';
 import {
   FunctionEntryRenderable,
   FunctionSignatureMetadataRenderable,

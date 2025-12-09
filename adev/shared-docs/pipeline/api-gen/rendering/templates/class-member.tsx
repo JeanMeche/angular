@@ -7,17 +7,15 @@
  */
 
 import {Fragment, h} from 'preact';
-import {MemberType} from '../entities.mjs';
+import {MemberType} from '../../entities/entities.mjs';
 import {
   isClassMethodEntry,
   isGetterEntry,
-  isInterfaceEntry,
   isPropertyEntry,
   isSetterEntry,
-} from '../entities/categorization.mjs';
+} from '../../entities/categorization.mjs';
 import {MemberEntryRenderable, MethodEntryRenderable} from '../entities/renderables.mjs';
 import {
-  PARAM_KEYWORD_CLASS_NAME,
   REFERENCE_MEMBER_CARD,
   REFERENCE_MEMBER_CARD_BODY,
   REFERENCE_MEMBER_CARD_HEADER,
@@ -29,6 +27,10 @@ import {CodeSymbol} from './code-symbols';
 import {CodeTableOfContents} from './code-table-of-contents';
 import {DeprecatedLabel} from './deprecated-label';
 import {RawHtml} from './raw-html';
+import {
+  isClassMethodEntryRenderable,
+  isInterfaceEntryRenderable,
+} from '../entities/categorization.mjs';
 
 export function ClassMember(props: {member: MemberEntryRenderable}) {
   const member = props.member;
@@ -43,7 +45,7 @@ export function ClassMember(props: {member: MemberEntryRenderable}) {
 
   const body = (
     <div className={REFERENCE_MEMBER_CARD_BODY}>
-      {isClassMethodEntry(member) ? (
+      {isClassMethodEntryRenderable(member) ? (
         renderMethod(member)
       ) : member.htmlDescription || member.deprecationMessage ? (
         <div className={REFERENCE_MEMBER_CARD_ITEM}>
@@ -73,7 +75,7 @@ export function ClassMember(props: {member: MemberEntryRenderable}) {
         )}
       </header>
       {body}
-      {isInterfaceEntry(member) ? (
+      {isInterfaceEntryRenderable(member) ? (
         <CodeTableOfContents entry={member} hideCopyButton={true} embedded={true} />
       ) : (
         <></>

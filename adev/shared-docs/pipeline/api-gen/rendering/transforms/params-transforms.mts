@@ -6,7 +6,8 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HasModuleName, HasParams, HasRenderableParams} from '../entities/traits.mjs';
+import {HasModuleName, HasParams} from '../../entities/traits.mjs';
+import {HasRenderableParams} from '../entities/traits.mjs';
 import {addHtmlDescription} from './jsdoc-transforms.mjs';
 import {addModuleName} from './module-name.mjs';
 

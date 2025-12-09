@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {ConstantEntry} from '../entities.mjs';
+import {ConstantEntry} from '../../entities/entities.mjs';
 import {ConstantEntryRenderable} from '../entities/renderables.mjs';
 import {addRenderableCodeToc} from './code-transforms.mjs';
 import {

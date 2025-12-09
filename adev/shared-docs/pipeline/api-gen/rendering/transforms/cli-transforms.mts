@@ -8,7 +8,7 @@
 
 import {marked} from 'marked';
 
-import {CliCommand, CliOption} from '../cli-entities.mjs';
+import {CliCommand, CliOption} from '../../entities/cli-entities.mjs';
 import {
   CliCardRenderable,
   CliCommandRenderable,

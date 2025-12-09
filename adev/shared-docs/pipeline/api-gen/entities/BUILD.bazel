@@ -1,0 +1,12 @@
+load("//adev/shared-docs:defaults.bzl", "ts_project")
+
+package(default_visibility = ["//adev/shared-docs/pipeline/api-gen:__subpackages__"])
+
+ts_project(
+    name = "entities",
+    srcs = glob(["*.mts"]),
+    visibility = [
+        "//adev/shared-docs/pipeline/api-gen/manifest:__pkg__",
+        "//adev/shared-docs/pipeline/api-gen/rendering:__pkg__",
+    ],
+)

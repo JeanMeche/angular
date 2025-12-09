@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {MemberEntry, MemberTags, MemberType, type DocEntry} from '../entities.mjs';
-import {isHiddenEntry} from '../entities/categorization.mjs';
+import {MemberEntry, MemberTags, MemberType, type DocEntry} from '../../entities/entities.mjs';
+import {isHiddenEntry} from '../../entities/categorization.mjs';
 import type {MemberEntryRenderable} from '../entities/renderables.mjs';
 
-import {HasMembers, HasModuleName, HasRenderableMembers, HasRepo} from '../entities/traits.mjs';
+import {HasModuleName, HasRenderableMembers, HasRepo} from '../entities/traits.mjs';
 import {addRenderableCodeToc} from './code-transforms.mjs';
 
 import {
@@ -21,6 +21,7 @@ import {
 } from './jsdoc-transforms.mjs';
 import {addModuleName} from './module-name.mjs';
 import {addRepo} from './repo.mjs';
+import {HasMembers} from '../../entities/traits.mjs';
 
 const lifecycleMethods = [
   'ngAfterContentChecked',

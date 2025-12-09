@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {HasModuleName} from '../entities/traits.mjs';
+import {HasModuleName} from '../../entities/traits.mjs';
 
 export function addModuleName<T>(entry: T, moduleName: string): T & HasModuleName {
   return {

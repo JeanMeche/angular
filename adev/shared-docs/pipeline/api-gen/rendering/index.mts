@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'fs';
+import {mkdirSync, readFileSync, writeFileSync} from 'fs';
 import path from 'path';
-import {CliCommand} from './cli-entities.mjs';
-import {DocEntry} from './entities.mjs';
-import {isCliEntry, isHiddenEntry} from './entities/categorization.mjs';
+import {CliCommand} from '../entities/cli-entities.mjs';
+import {DocEntry} from '../entities/entities.mjs';
+import {isCliEntry, isHiddenEntry} from '../entities/categorization.mjs';
 import {getRenderable} from './processing.mjs';
 import {renderEntry} from './rendering.mjs';
 import {setCurrentSymbol, setSymbols} from './symbol-context.mjs';

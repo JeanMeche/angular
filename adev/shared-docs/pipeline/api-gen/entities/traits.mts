@@ -6,21 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {
-  CodeLineRenderable,
-  JsDocTagRenderable,
-  LinkEntryRenderable,
-  MemberEntryRenderable,
-  ParameterEntryRenderable,
-} from './renderables.mjs';
+import {JsDocTagEntry, MemberEntry, ParameterEntry} from './entities.mjs';
 
-export interface HasAdditionalLinks {
-  additionalLinks: LinkEntryRenderable[];
-}
-
-/** A doc entry that has jsdoc tags transformed for rendering. */
-export interface HasRenderableJsDocTags {
-  jsdocTags: JsDocTagRenderable[];
+/** A doc entry that has jsdoc tags. */
+export interface HasJsDocTags {
+  jsdocTags: JsDocTagEntry[];
 }
 
 /** A doc entry that has a description. */
@@ -44,14 +34,9 @@ export interface HasHtmlUsageNotes {
   htmlUsageNotes: string;
 }
 
-/** A doc entry that has members groups transformed for rendering. */
-export interface HasRenderableMembersGroups {
-  membersGroups: Map<string, MemberEntryRenderable[]>;
-}
-
 /** A doc entry that has members transformed for rendering. */
-export interface HasRenderableMembers {
-  members: MemberEntryRenderable[];
+export interface HasMembers {
+  members: MemberEntry[];
 }
 
 /** A doc entry that has an associated JS module name. */
@@ -64,20 +49,9 @@ export interface HasRepo {
   repo: string;
 }
 
-/** A doc entry that has ToC transformed for rendering. */
-export interface HasRenderableToc {
-  // Prefer formatted code if defined,
-  formattedCode: string | null;
-
-  // Else use this more messy but more flexible structure (which supports deprecation info)
-  beforeCodeGroups: string;
-  codeLinesGroups: Map<string, CodeLineRenderable[]>;
-  afterCodeGroups: string;
-}
-
-/** A doc entry that has params for rendering. */
-export interface HasRenderableParams {
-  params: ParameterEntryRenderable[];
+/** A doc entry that has params transformed for rendering. */
+export interface HasParams {
+  params: ParameterEntry[];
 }
 
 export interface HasDeprecatedFlag {

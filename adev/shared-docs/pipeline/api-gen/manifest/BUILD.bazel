@@ -24,6 +24,7 @@ ts_project(
     deps = [
         "//adev:node_modules/@angular/compiler-cli",
         "//adev:node_modules/@types/node",
+        "//adev/shared-docs/pipeline/api-gen/entities",
     ],
 )
 

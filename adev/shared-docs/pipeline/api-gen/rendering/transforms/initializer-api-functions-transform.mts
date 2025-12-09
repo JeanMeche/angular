@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {InitializerApiFunctionEntry} from '../entities.mjs';
+import {InitializerApiFunctionEntry} from '../../entities/entities.mjs';
 
 import {InitializerApiFunctionRenderable} from '../entities/renderables.mjs';
 

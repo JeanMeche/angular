@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {EnumEntry} from '../entities.mjs';
+import {EnumEntry} from '../../entities/entities.mjs';
 import {EnumEntryRenderable} from '../entities/renderables.mjs';
 import {addRenderableCodeToc} from './code-transforms.mjs';
 import {

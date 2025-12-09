@@ -7,7 +7,7 @@
  */
 
 import {Fragment, h} from 'preact';
-import {PipeEntry} from '../entities.mjs';
+import {PipeEntry} from '../../entities/entities.mjs';
 import {
   ClassEntryRenderable,
   InterfaceEntryRenderable,

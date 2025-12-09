@@ -6,9 +6,9 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {DocEntry} from './entities.mjs';
+import {DocEntry} from '../entities/entities.mjs';
 
-import {CliCommand} from './cli-entities.mjs';
+import {CliCommand} from '../entities/cli-entities.mjs';
 import {
   isClassEntry,
   isCliEntry,
@@ -19,7 +19,7 @@ import {
   isInitializerApiFunctionEntry,
   isInterfaceEntry,
   isTypeAliasEntry,
-} from './entities/categorization.mjs';
+} from '../entities/categorization.mjs';
 import {CliCommandRenderable, DocEntryRenderable} from './entities/renderables.mjs';
 import {getClassRenderable} from './transforms/class-transforms.mjs';
 import {getCliRenderable} from './transforms/cli-transforms.mjs';

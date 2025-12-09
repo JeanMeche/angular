@@ -16,7 +16,7 @@ import {
   MemberTags,
   ParameterEntry,
   PropertyEntry,
-} from '../entities.mjs';
+} from '../../entities/entities.mjs';
 
 import {
   isClassEntry,
@@ -31,9 +31,9 @@ import {
   isInterfaceEntry,
   isSetterEntry,
   isTypeAliasEntry,
-} from '../entities/categorization.mjs';
+} from '../../entities/categorization.mjs';
 import {CodeLineRenderable} from '../entities/renderables.mjs';
-import {HasModuleName, HasRenderableToc} from '../entities/traits.mjs';
+import {HasModuleName} from '../../entities/traits.mjs';
 import {
   getHighlighterInstance,
   insertParenthesesForDecoratorInShikiHtml,
@@ -48,6 +48,7 @@ import {
   filterMergedNamespaceMembers,
   mergeGettersAndSetters,
 } from './member-transforms.mjs';
+import {HasRenderableToc} from '../entities/traits.mjs';
 
 const INDENT = '  ';
 const SPACE = ' ';

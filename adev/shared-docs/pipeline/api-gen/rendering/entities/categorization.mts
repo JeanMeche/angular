@@ -1,31 +1,13 @@
-/**
- * @license
- * Copyright Google LLC All Rights Reserved.
- *
- * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.dev/license
- */
-
 import {
-  ClassEntry,
-  ConstantEntry,
-  DecoratorEntry,
-  DocEntry,
-  EntryType,
-  EnumEntry,
-  FunctionEntry,
-  InitializerApiFunctionEntry,
-  InterfaceEntry,
-  JsDocTagEntry,
-  MemberEntry,
-  MemberType,
-  MethodEntry,
-  PropertyEntry,
-  TypeAliasEntry,
-} from '../entities.mjs';
-
-import {CliCommand} from '../cli-entities.mjs';
-
+  isClassEntry,
+  isConstantEntry,
+  isDecoratorEntry,
+  isEnumEntry,
+  isFunctionEntry,
+  isInterfaceEntry,
+  isTypeAliasEntry,
+} from '../../entities/categorization.mjs';
+import {MemberType} from '../../entities/entities.mjs';
 import {
   ClassEntryRenderable,
   ConstantEntryRenderable,
@@ -33,160 +15,62 @@ import {
   DocEntryRenderable,
   EnumEntryRenderable,
   FunctionEntryRenderable,
-  InitializerApiFunctionRenderable,
   InterfaceEntryRenderable,
   MemberEntryRenderable,
   MethodEntryRenderable,
   TypeAliasEntryRenderable,
 } from './renderables.mjs';
-import {HasJsDocTags} from './traits.mjs';
 
-/** Gets whether the given entry represents a class */
-export function isClassEntry(entry: DocEntryRenderable): entry is ClassEntryRenderable;
-export function isClassEntry(entry: DocEntry): entry is ClassEntry;
-export function isClassEntry(entry: DocEntry): entry is ClassEntry {
-  // TODO: add something like `statementType` to extraction so we don't have to check so many
-  //     entry types here.
-  return (
-    entry.entryType === EntryType.UndecoratedClass ||
-    entry.entryType === EntryType.Component ||
-    entry.entryType === EntryType.Pipe ||
-    entry.entryType === EntryType.NgModule ||
-    entry.entryType === EntryType.Directive
-  );
+export function isClassEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is ClassEntryRenderable {
+  return isClassEntry(renderable);
 }
 
-export function isDecoratorEntry(entry: DocEntryRenderable): entry is DecoratorEntryRenderable;
-export function isDecoratorEntry(entry: DocEntry): entry is DecoratorEntry;
-export function isDecoratorEntry(entry: DocEntry): entry is DecoratorEntry {
-  return entry.entryType === EntryType.Decorator;
-}
-
-/** Gets whether the given entry represents a constant */
-export function isConstantEntry(entry: DocEntryRenderable): entry is ConstantEntryRenderable;
-export function isConstantEntry(entry: DocEntry): entry is ConstantEntry;
-export function isConstantEntry(entry: DocEntry): entry is ConstantEntry {
-  return entry.entryType === EntryType.Constant;
-}
-
-/** Gets whether the given entry represents a type alias */
-export function isTypeAliasEntry(entry: DocEntryRenderable): entry is TypeAliasEntryRenderable;
-export function isTypeAliasEntry(entry: DocEntry): entry is TypeAliasEntry;
-export function isTypeAliasEntry(entry: DocEntry): entry is TypeAliasEntry {
-  return entry.entryType === EntryType.TypeAlias;
-}
-
-/** Gets whether the given entry represents an enum */
-export function isEnumEntry(entry: DocEntryRenderable): entry is EnumEntryRenderable;
-export function isEnumEntry(entry: DocEntry): entry is EnumEntry;
-export function isEnumEntry(entry: DocEntry): entry is EnumEntry {
-  return entry.entryType === EntryType.Enum;
-}
-
-/** Gets whether the given entry represents an interface. */
-export function isInterfaceEntry(
+export function isInterfaceEntryRenderable(
   entry: MemberEntryRenderable,
 ): entry is InterfaceEntryRenderable & MemberEntryRenderable;
-export function isInterfaceEntry(entry: DocEntryRenderable): entry is InterfaceEntryRenderable;
-export function isInterfaceEntry(entry: DocEntry): entry is InterfaceEntry;
-export function isInterfaceEntry(entry: DocEntry | MemberEntryRenderable): entry is InterfaceEntry {
-  return (entry as DocEntry).entryType === EntryType.Interface;
-}
-
-/** Gets whether the given member entry is a method entry. */
-export function isClassMethodEntry(entry: MemberEntryRenderable): entry is MethodEntryRenderable;
-export function isClassMethodEntry(entry: MemberEntry): entry is MethodEntry;
-export function isClassMethodEntry(entry: MemberEntry): entry is MethodEntry {
-  return entry.memberType === MemberType.Method;
-}
-
-/** Gets whether the given entry represents a function */
-export function isFunctionEntry(entry: DocEntryRenderable): entry is FunctionEntryRenderable;
-export function isFunctionEntry(entry: DocEntry): entry is FunctionEntry;
-export function isFunctionEntry(entry: DocEntry): entry is FunctionEntry {
-  return entry.entryType === EntryType.Function;
-}
-
-export function isInitializerApiFunctionEntry(
+export function isInterfaceEntryRenderable(
   entry: DocEntryRenderable,
-): entry is InitializerApiFunctionRenderable;
-export function isInitializerApiFunctionEntry(
-  entry: DocEntry,
-): entry is InitializerApiFunctionEntry;
-export function isInitializerApiFunctionEntry(
-  entry: DocEntry,
-): entry is InitializerApiFunctionEntry {
-  return entry.entryType === EntryType.InitializerApiFunction;
+): entry is InterfaceEntryRenderable;
+export function isInterfaceEntryRenderable(
+  renderable: MemberEntryRenderable | DocEntryRenderable,
+): renderable is InterfaceEntryRenderable {
+  return isInterfaceEntry(renderable as DocEntryRenderable);
 }
 
-/** Gets whether the given entry represents a property */
-export function isPropertyEntry(entry: MemberEntry): entry is PropertyEntry {
-  return entry.memberType === MemberType.Property;
+export function isDecoratorEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is DecoratorEntryRenderable {
+  return isDecoratorEntry(renderable);
 }
 
-/** Gets whether the given entry represents a getter */
-export function isGetterEntry(entry: MemberEntry): entry is PropertyEntry {
-  return entry.memberType === MemberType.Getter;
+export function isConstantEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is ConstantEntryRenderable {
+  return isConstantEntry(renderable);
 }
 
-/** Gets whether the given entry represents a setter */
-export function isSetterEntry(entry: MemberEntry): entry is PropertyEntry {
-  return entry.memberType === MemberType.Setter;
+export function isEnumEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is EnumEntryRenderable {
+  return isEnumEntry(renderable);
 }
 
-/** Gets whether the given entry is hidden. */
-export function isHiddenEntry<T extends HasJsDocTags>(entry: T): boolean {
-  return getTag(entry, 'docs-private', /* every */ true) ? true : false;
+export function isFunctionEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is FunctionEntryRenderable {
+  return isFunctionEntry(renderable);
 }
 
-/** Gets whether the given entry is deprecated. */
-export function isDeprecatedEntry<T extends HasJsDocTags>(entry: T): boolean {
-  return getTag(entry, 'deprecated', /* every */ true) ? true : false;
+export function isTypeAliasEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is TypeAliasEntryRenderable {
+  return isTypeAliasEntry(renderable);
 }
 
-export function getDeprecatedEntry<T extends HasJsDocTags>(entry: T) {
-  const comment = entry.jsdocTags.find((tag) => tag.name === 'deprecated')?.comment;
-
-  // Dropping the eventual version number in front of the comment.
-  return comment?.match(/(?:\d+(?:\.\d+)?\s*)?(.*)/s)?.[1] ?? null;
-}
-
-/** Gets whether the given entry has a given JsDoc tag. */
-function getTag<T extends HasJsDocTags | FunctionEntry>(entry: T, tag: string, every = false) {
-  const hasTagName = (t: JsDocTagEntry) => t.name === tag;
-
-  if (every && 'signatures' in entry && entry.signatures.length > 1) {
-    // For overloads we need to check all signatures.
-    return entry.signatures.every((s) => s.jsdocTags.some(hasTagName))
-      ? entry.signatures[0].jsdocTags.find(hasTagName)
-      : undefined;
-  }
-
-  const jsdocTags = [
-    ...entry.jsdocTags,
-    ...((entry as FunctionEntry).signatures?.flatMap((s) => s.jsdocTags) ?? []),
-    ...((entry as FunctionEntry).implementation?.jsdocTags ?? []),
-  ];
-
-  return jsdocTags.find(hasTagName);
-}
-
-export function getTagSinceVersion<T extends HasJsDocTags>(
-  entry: T,
-  tagName: string,
-  every = false,
-): {version: string | undefined} | undefined {
-  const tag = getTag(entry, tagName, every);
-  if (!tag) {
-    return undefined;
-  }
-
-  // In case of deprecated tag we need to separate the version from the deprecation message.
-  const version = tag.comment.match(/\d+(\.\d+)?/)?.[0];
-  return {version};
-}
-
-/** Gets whether the given entry is a cli entry. */
-export function isCliEntry(entry: unknown): entry is CliCommand {
-  return (entry as CliCommand).command !== undefined;
+export function isClassMethodEntryRenderable(
+  renderable: MemberEntryRenderable,
+): renderable is MethodEntryRenderable {
+  return renderable.memberType === MemberType.Method;
 }

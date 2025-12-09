@@ -7,7 +7,7 @@
  */
 
 import {Fragment, h} from 'preact';
-import {EntryType, isDocEntryWithSourceInfo, PipeEntry} from '../entities.mjs';
+import {EntryType, isDocEntryWithSourceInfo, PipeEntry} from '../../entities/entities.mjs';
 import {DocEntryRenderable, PipeEntryRenderable} from '../entities/renderables.mjs';
 import {
   HEADER_CLASS_NAME,

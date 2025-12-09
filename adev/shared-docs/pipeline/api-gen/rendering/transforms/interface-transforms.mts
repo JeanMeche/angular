@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {InterfaceEntry} from '../entities.mjs';
+import {InterfaceEntry} from '../../entities/entities.mjs';
 import {InterfaceEntryRenderable} from '../entities/renderables.mjs';
 import {addRenderableCodeToc} from './code-transforms.mjs';
 import {

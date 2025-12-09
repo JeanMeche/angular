@@ -6,12 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {JsDocTagEntry} from '../entities.mjs';
+import {JsDocTagEntry} from '../../entities/entities.mjs';
 
-import {getDeprecatedEntry, getTagSinceVersion} from '../entities/categorization.mjs';
+import {getDeprecatedEntry, getTagSinceVersion} from '../../entities/categorization.mjs';
 import {LinkEntryRenderable} from '../entities/renderables.mjs';
 import {
-  HasAdditionalLinks,
   HasDeprecatedFlag,
   HasDescription,
   HasDeveloperPreviewFlag,
@@ -20,9 +19,8 @@ import {
   HasHtmlUsageNotes,
   HasJsDocTags,
   HasModuleName,
-  HasRenderableJsDocTags,
   HasStableFlag,
-} from '../entities/traits.mjs';
+} from '../../entities/traits.mjs';
 
 import {parseMarkdown} from '../../../shared/marked/parse.mjs';
 import {getHighlighterInstance} from '../shiki/shiki.mjs';
@@ -33,6 +31,7 @@ import {
   unknownSymbolMessage,
 } from '../symbol-context.mjs';
 import {addApiLinksToHtml} from './code-transforms.mjs';
+import {HasAdditionalLinks, HasRenderableJsDocTags} from '../entities/traits.mjs';
 
 const JS_DOC_USAGE_NOTE_TAGS: Set<string> = new Set(['remarks', 'usageNotes', 'example']);
 export const JS_DOC_SEE_TAG = 'see';

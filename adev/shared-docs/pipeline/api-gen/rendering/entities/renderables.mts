@@ -21,10 +21,9 @@ import {
   ParameterEntry,
   PipeEntry,
   TypeAliasEntry,
-} from '../entities.mjs';
+} from '../../entities/entities.mjs';
 
-import {CliCommand, CliOption} from '../cli-entities.mjs';
-
+import {CliCommand, CliOption} from '../../entities/cli-entities.mjs';
 import {HasRenderableToc} from './traits.mjs';
 
 /** JsDoc tag info augmented with transformed content for rendering. */

@@ -18,8 +18,18 @@ import {
   isInitializerApiFunctionEntry,
   isInterfaceEntry,
   isTypeAliasEntry,
-} from './entities/categorization.mjs';
-import {CliCommandRenderable, DocEntryRenderable} from './entities/renderables.mjs';
+} from './../entities/categorization.mjs';
+import {
+  ClassEntryRenderable,
+  CliCommandRenderable,
+  ConstantEntryRenderable,
+  DecoratorEntryRenderable,
+  DocEntryRenderable,
+  EnumEntryRenderable,
+  FunctionEntryRenderable,
+  InitializerApiFunctionRenderable,
+  TypeAliasEntryRenderable,
+} from './entities/renderables.mjs';
 import {ClassReference} from './templates/class-reference';
 import {CliCommandReference} from './templates/cli-reference';
 import {ConstantReference} from './templates/constant-reference';
@@ -30,6 +40,21 @@ import {InitializerApiFunction} from './templates/initializer-api-function';
 import {TypeAliasReference} from './templates/type-alias-reference';
 import {DecoratorReference} from './templates/decorator-reference';
 import {setCurrentSymbol} from './symbol-context.mjs';
+import {
+  isClassEntryRenderable,
+  isConstantEntryRenderable,
+  isDecoratorEntryRenderable,
+  isEnumEntryRenderable,
+  isFunctionEntryRenderable,
+  isInterfaceEntryRenderable,
+  isTypeAliasEntryRenderable,
+} from './entities/categorization.mjs';
+
+function isInitializerApiFunctionEntryRenderable(
+  renderable: DocEntryRenderable,
+): renderable is InitializerApiFunctionRenderable {
+  return isInitializerApiFunctionEntry(renderable);
+}
 
 /** Given a doc entry, get the transformed version of the entry for rendering. */
 export function renderEntry(renderable: DocEntryRenderable | CliCommandRenderable): string {
@@ -38,25 +63,25 @@ export function renderEntry(renderable: DocEntryRenderable | CliCommandRenderabl
     return render(CliCommandReference(renderable));
   }
 
-  if (isClassEntry(renderable) || isInterfaceEntry(renderable)) {
+  if (isClassEntryRenderable(renderable) || isInterfaceEntryRenderable(renderable)) {
     return render(ClassReference(renderable));
   }
-  if (isDecoratorEntry(renderable)) {
+  if (isDecoratorEntryRenderable(renderable)) {
     return render(DecoratorReference(renderable));
   }
-  if (isConstantEntry(renderable)) {
+  if (isConstantEntryRenderable(renderable)) {
     return render(ConstantReference(renderable));
   }
-  if (isEnumEntry(renderable)) {
+  if (isEnumEntryRenderable(renderable)) {
     return render(EnumReference(renderable));
   }
-  if (isFunctionEntry(renderable)) {
+  if (isFunctionEntryRenderable(renderable)) {
     return render(FunctionReference(renderable));
   }
-  if (isTypeAliasEntry(renderable)) {
+  if (isTypeAliasEntryRenderable(renderable)) {
     return render(TypeAliasReference(renderable));
   }
-  if (isInitializerApiFunctionEntry(renderable)) {
+  if (isInitializerApiFunctionEntryRenderable(renderable)) {
     return render(InitializerApiFunction(renderable));
   }
 
