@@ -16,8 +16,8 @@ import {
   setActiveConsumer,
 } from '../../../primitives/signals';
 
+import {encapsulateBoundaryError, ErrorDetails} from '../../error_handler';
 import {RuntimeError, RuntimeErrorCode} from '../../errors';
-import {encapsulateBoundaryError} from '../../error_handler';
 import {assertDefined, assertEqual} from '../../util/assert';
 import {addAfterRenderSequencesForView} from '../after_render/view';
 import {executeCheckHooks, executeInitAndCheckHooks, incrementInitPhaseFlags} from '../hooks';
@@ -28,8 +28,10 @@ import {
   MOVED_VIEWS,
 } from '../interfaces/container';
 import {ComponentTemplate, HostBindingsFunction, RenderFlags} from '../interfaces/definition';
+import {isLContainer} from '../interfaces/type_checks';
 import {
   CONTEXT,
+  DECLARATION_COMPONENT_VIEW,
   EFFECTS_TO_SCHEDULE,
   ENVIRONMENT,
   FLAGS,
@@ -62,7 +64,6 @@ import {
   setIsRefreshingViews,
   setSelectedIndex,
 } from '../state';
-import {isLContainer} from '../interfaces/type_checks';
 import {getFirstLContainer, getNextLContainer} from '../util/view_traversal_utils';
 import {
   getComponentLViewByIndex,
@@ -74,9 +75,10 @@ import {
   viewAttachedToChangeDetector,
 } from '../util/view_utils';
 
+import {ProfilerEvent} from '../../../primitives/devtools';
+import {Type} from '../../../src/interface/type';
 import {isDestroyed} from '../interfaces/type_checks';
 import {profiler} from '../profiler';
-import {ProfilerEvent} from '../../../primitives/devtools';
 import {executeViewQueryFn, refreshContentQueries} from '../queries/query_execution';
 import {runEffectsInView} from '../reactivity/view_effect_runner';
 import {executeTemplate} from './shared';
@@ -374,7 +376,16 @@ export function refreshView<T>(
       if (onError) {
         // We found an error boundary / explicit error handler in the LView chain.
         try {
-          const details = {caught: true};
+          const declarationComponentView = lView[DECLARATION_COMPONENT_VIEW];
+          const declarationInstance = declarationComponentView[CONTEXT] as any;
+          const declarationType: Type<unknown> = declarationInstance?.constructor;
+
+          const details: ErrorDetails = {
+            caught: true,
+            declarationInstance,
+            declarationType,
+            caughtBy: onError,
+          };
           onError(encapsulateBoundaryError(errorToHandle), details);
           handled = true;
           break;
