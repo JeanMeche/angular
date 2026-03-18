@@ -19,8 +19,14 @@ import {NgZone} from './zone/ng_zone';
 
 import {Type} from './interface/type';
 
+/**
+ * Error details caught be the error boundary
+ *
+ * @publicApi 22.2
+ */
 export interface ErrorDetails {
-  declarationType?: Type<any>;
+  declarationType: Type<any>;
+  declarationInstance: unknown;
   caught: boolean;
   boundary?: {
     type: Type<any>;
