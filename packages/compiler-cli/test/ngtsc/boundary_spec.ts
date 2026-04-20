@@ -7,8 +7,8 @@
  */
 
 import {runInEachFileSystem} from '../../src/ngtsc/file_system/testing';
+import {loadStandardTestFiles} from '../../src/ngtsc/testing';
 import {NgtscTestEnvironment} from './env';
-import {loadStandardTestFiles, getSourceCodeForDiagnostic} from '../../src/ngtsc/testing';
 
 const testFiles = loadStandardTestFiles({fakeCommon: true});
 
@@ -36,7 +36,6 @@ runInEachFileSystem(() => {
               <div>{{ err.message }}</div>
             }
           \`,
-          standalone: true,
         })
         export class TestCmp {}
       `,
@@ -71,7 +70,6 @@ runInEachFileSystem(() => {
               <div>{{ err.nonExistentProperty }}</div>
             }
           \`,
-          standalone: true,
         })
         export class TestCmp {}
       `,
@@ -105,7 +103,6 @@ runInEachFileSystem(() => {
               <div>Fallback</div>
             }
           \`,
-          standalone: true,
         })
         export class TestCmp {
           CustomError = CustomError; // Expose to template if needed, though with control flow it uses standard TS scope in some regards
@@ -127,6 +124,101 @@ runInEachFileSystem(() => {
           ),
         );
       }
+      expect(diags.length).toBe(0);
+    });
+
+    it('should error when accessing error alias outside of error block', () => {
+      env.write(
+        'test.ts',
+        `
+        import {Component} from '@angular/core';
+
+        @Component({
+          selector: 'test-cmp',
+          template: \`
+            @boundary {
+              <div>Normal {{ err.message }}</div>
+            } @error (let err) {
+              <div>{{ err.message }}</div>
+            }
+          \`,
+        })
+        export class TestCmp {}
+      `,
+      );
+
+      const diags = env.driveDiagnostics();
+      expect(diags.length).toBe(1);
+      expect(diags[0].messageText).toContain("Property 'err' does not exist on type 'TestCmp'");
+    });
+
+    it('should correctly handle nested boundary blocks and shadow error alias', () => {
+      env.write(
+        'test.ts',
+        `
+        import {Component} from '@angular/core';
+
+        class CustomError extends Error {
+          customField = 'test';
+        }
+
+        @Component({
+          selector: 'test-cmp',
+          template: \`
+            @boundary {
+              @boundary {
+                <div>Inner</div>
+              } @error (let err; when err instanceof CustomError) {
+                <div>Inner Custom: {{ err.customField }}</div>
+              } @error (let err) {
+                <div>Inner Fallback: {{ err.message }}</div>
+              }
+            } @error (let err) {
+              <div>Outer Fallback: {{ err.message }}</div>
+            }
+          \`,
+        })
+        export class TestCmp {
+          CustomError = CustomError;
+        }
+      `,
+      );
+
+      const diags = env.driveDiagnostics();
+      expect(diags.length).toBe(0);
+    });
+
+    it('should allow multiple error blocks with different conditions', () => {
+      env.write(
+        'test.ts',
+        `
+        import {Component} from '@angular/core';
+
+        class ErrorA extends Error { type = 'a' }
+        class ErrorB extends Error { type = 'b' }
+
+        @Component({
+          selector: 'test-cmp',
+          template: \`
+            @boundary {
+              <div>Normal</div>
+            } @error (let err; when err instanceof ErrorA) {
+              <div>A: {{ err.type }}</div>
+            } @error (let err; when err instanceof ErrorB) {
+              <div>B: {{ err.type }}</div>
+            } @error (let err) {
+              <div>Generic: {{ err.message }}</div>
+            }
+          \`,
+        })
+        export class TestCmp {
+          ErrorA = ErrorA;
+          ErrorB = ErrorB;
+        }
+      `,
+      );
+
+      const diags = env.driveDiagnostics();
       expect(diags.length).toBe(0);
     });
   });
