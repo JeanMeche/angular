@@ -46,6 +46,7 @@ export {
 export {HttpRequest, HttpRequestOptions} from './src/request';
 export {httpResource, HttpResourceFn} from './src/resource';
 export {HttpResourceOptions, HttpResourceRef, HttpResourceRequest} from './src/resource_api';
+export {Http, HttpFetchResult, HttpStatus} from './src/http';
 export {
   HttpDownloadProgressEvent,
   HttpErrorResponse,
