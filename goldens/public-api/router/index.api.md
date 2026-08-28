@@ -11,6 +11,7 @@ import { DefaultExport } from '@angular/core';
 import { ElementRef } from '@angular/core';
 import { EnvironmentInjector } from '@angular/core';
 import { EnvironmentProviders } from '@angular/core';
+import { ErrorDetails } from '@angular/core';
 import { EventEmitter } from '@angular/core';
 import * as i0 from '@angular/core';
 import { InjectionToken } from '@angular/core';
@@ -668,6 +669,7 @@ export interface Route {
     children?: Routes;
     component?: Type<any>;
     data?: Data;
+    errorComponent?: Type<unknown>;
     loadChildren?: LoadChildren;
     loadComponent?: () => Type<unknown> | Observable<Type<unknown> | DefaultExport<Type<unknown>>> | Promise<Type<unknown> | DefaultExport<Type<unknown>>>;
     matcher?: UrlMatcher;
@@ -680,6 +682,9 @@ export interface Route {
     runGuardsAndResolvers?: RunGuardsAndResolvers;
     title?: string | Type<Resolve<string>> | ResolveFn<string>;
 }
+
+// @public
+export const ROUTE_ERROR: InjectionToken<RouteErrorContext>;
 
 // @public
 export class RouteConfigLoadEnd {

@@ -9,7 +9,12 @@
 export {createUrlTreeFromSnapshot} from './create_url_tree';
 export {RouterLink, RouterLinkWithHref} from './directives/router_link';
 export {RouterLinkActive} from './directives/router_link_active';
-export {ROUTER_OUTLET_DATA, RouterOutlet, RouterOutletContract} from './directives/router_outlet';
+export {
+  ROUTER_OUTLET_DATA,
+  ROUTE_ERROR,
+  RouterOutlet,
+  RouterOutletContract,
+} from './directives/router_outlet';
 export {
   ActivationEnd,
   ActivationStart,

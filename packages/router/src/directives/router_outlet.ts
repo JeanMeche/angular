@@ -10,9 +10,9 @@ import {
   ChangeDetectorRef,
   ComponentRef,
   Directive,
-  effect,
   EffectRef,
   EnvironmentInjector,
+  ErrorHandler,
   EventEmitter,
   inject,
   Injectable,
@@ -33,12 +33,12 @@ import {combineLatest, of, Subscription} from 'rxjs';
 import {switchMap} from 'rxjs/operators';
 
 import {RuntimeErrorCode} from '../errors';
-import type {RouterResourcesFeatureImplementation} from '../router_resource_feature';
 import {Data} from '../models';
+import {ComponentInputBindingOptions} from '../router_config';
 import {ChildrenOutletContexts} from '../router_outlet_context';
+import type {RouterResourcesFeatureImplementation} from '../router_resource_feature';
 import {ActivatedRoute} from '../router_state';
 import {PRIMARY_OUTLET} from '../shared';
-import {ComponentInputBindingOptions} from '../router_config';
 
 /**
  * An `InjectionToken` provided by the `RouterOutlet` and can be set using the `routerOutletData`
@@ -63,6 +63,32 @@ import {ComponentInputBindingOptions} from '../router_config';
  */
 export const ROUTER_OUTLET_DATA = new InjectionToken<Signal<unknown | undefined>>(
   typeof ngDevMode !== 'undefined' && ngDevMode ? 'RouterOutlet data' : '',
+);
+
+import {ErrorDetails} from '@angular/core';
+
+/**
+ * The contextual information provided when a route component fails to render,
+ * triggering an `errorComponent` fallback.
+ *
+ * @publicApi
+ * @experimental
+ */
+export interface RouteErrorContext {
+  /** The error that caused the fallback to trigger. */
+  error: unknown;
+  /** Additional details regarding the error, similar to what the global `ErrorHandler` receives. */
+  details: ErrorDetails;
+}
+
+/**
+ * An InjectionToken that can be used to inject the error that caused an `errorComponent` to be rendered.
+ *
+ * @publicApi
+ * @experimental
+ */
+export const ROUTE_ERROR = new InjectionToken<RouteErrorContext>(
+  typeof ngDevMode !== 'undefined' && ngDevMode ? 'Route Error' : '',
 );
 
 /**
@@ -401,16 +427,78 @@ export class RouterOutlet implements OnDestroy, OnInit, RouterOutletContract {
       this.routerOutletData,
     );
 
-    this.activated = location.createComponent(component, {
-      index: location.length,
-      injector,
-      environmentInjector: environmentInjector,
-    });
-    // Calling `markForCheck` to make sure we will run the change detection when the
-    // `RouterOutlet` is inside a `ChangeDetectionStrategy.OnPush` component.
-    this.changeDetector.markForCheck();
-    this.inputBinder?.bindActivatedRouteToOutletComponent(this, this.location.injector);
-    this.activateEvents.emit(this.activated.instance);
+    const errorComponent = snapshot.routeConfig?.errorComponent;
+    let onError: ((error: Error, details: any) => void) | undefined = undefined;
+
+    if (errorComponent) {
+      onError = (error: Error, details: any) => {
+        const errorHandler = injector.get(ErrorHandler, null);
+        if (errorHandler) {
+          // Remove the caughtBy property so we don't leak this internal handler
+          delete details.caughtBy;
+
+          if ((errorHandler as any).onViewError) {
+            (errorHandler as any).onViewError(error, details);
+          } else {
+            errorHandler.handleError(error);
+          }
+        }
+
+        try {
+          // Destroy the failing component if it was partially or fully created
+          if (this.activated) {
+            this.activated.destroy();
+            this.activated = null;
+          }
+
+          // Instantiate the error component
+          const errorInjector = Injector.create({
+            providers: [{provide: ROUTE_ERROR, useValue: {error, details}}],
+            parent: injector,
+          });
+
+          this.activated = location.createComponent(errorComponent, {
+            index: location.length,
+            injector: errorInjector,
+            environmentInjector: environmentInjector,
+          });
+
+          // Trigger change detection and events for the error component
+          this.changeDetector.markForCheck();
+          this.inputBinder?.bindActivatedRouteToOutletComponent(this, this.location.injector);
+          this.activateEvents.emit(this.activated.instance);
+        } catch (innerError) {
+          console.error('INNER ERROR DURING ON_ERROR:', innerError);
+          throw innerError;
+        }
+      };
+    }
+
+    try {
+      this.activated = location.createComponent(component, {
+        index: location.length,
+        injector,
+        environmentInjector: environmentInjector,
+        onError,
+      });
+      // Calling `markForCheck` to make sure we will run the change detection when the
+      // `RouterOutlet` is inside a `ChangeDetectionStrategy.OnPush` component.
+      this.changeDetector.markForCheck();
+      this.inputBinder?.bindActivatedRouteToOutletComponent(this, this.location.injector);
+      this.activateEvents.emit(this.activated.instance);
+    } catch (e: any) {
+      if (onError) {
+        // If an error happens synchronously during createComponent, call onError directly
+        onError(e, {
+          caught: true,
+          declarationInstance: this,
+          declarationType: RouterOutlet,
+          caughtBy: onError,
+        });
+      } else {
+        throw e;
+      }
+    }
   }
 }
 

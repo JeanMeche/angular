@@ -7,24 +7,34 @@
  */
 
 import {CommonModule, NgForOf} from '@angular/common';
-import {Component, inject, Input, Type, NgModule, signal, resource} from '@angular/core';
+import {
+  Component,
+  ErrorHandler,
+  inject,
+  Input,
+  NgModule,
+  resource,
+  signal,
+  Type,
+} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {timeout, useAutoTick} from '@angular/private/testing';
+import {EnvironmentProviders, InjectionToken} from '../../../core/src/di';
 import {
   provideRouter as internalProvideRouter,
+  ɵnonBlocking as nonBlocking,
+  Route,
+  ROUTE_ERROR,
   Router,
+  ROUTER_OUTLET_DATA,
+  RouterFeatures,
   RouterModule,
   RouterOutlet,
   withComponentInputBinding,
-  ROUTER_OUTLET_DATA,
   ɵwithRouterResources as withRouterResources,
-  ɵnonBlocking as nonBlocking,
-  Route,
-  RouterFeatures,
 } from '../../index';
-import {RouterTestingHarness} from '../../testing';
-import {EnvironmentProviders, InjectionToken} from '../../../core/src/di';
-import {useAutoTick, timeout} from '@angular/private/testing';
 import {ResourceContext, ResourceResult} from '../../src/models';
+import {RouterTestingHarness} from '../../testing';
 
 // TODO: Use the public @angular/router API once exposed
 type InternalRoute = Route & {
@@ -865,3 +875,125 @@ async function createRoot<T>(router: Router, type: Type<T>): Promise<ComponentFi
   await advance(f);
   return f;
 }
+
+describe('errorComponent integration', () => {
+  useAutoTick();
+
+  it('should instantiate errorComponent if the primary component throws during initialization', async () => {
+    @Component({
+      template: '<router-outlet />',
+      imports: [RouterOutlet],
+    })
+    class RootCmp {}
+
+    @Component({
+      template: 'fallback: {{ $any(errorContext.error).message }}',
+    })
+    class FallbackCmp {
+      errorContext = inject(ROUTE_ERROR);
+    }
+
+    @Component({
+      template: 'primary',
+    })
+    class PrimaryCmp {
+      constructor() {
+        throw new Error('Sync error during initialization');
+      }
+    }
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: 'bad',
+            component: PrimaryCmp,
+            errorComponent: FallbackCmp,
+          },
+        ]),
+      ],
+    });
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(RootCmp);
+    fixture.detectChanges();
+    await router.navigateByUrl('/bad');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.innerHTML).toContain('fallback: Sync error during initialization');
+  });
+
+  it('should instantiate errorComponent if the primary component throws during change detection', async () => {
+    @Component({
+      template: '<router-outlet />',
+      imports: [RouterOutlet],
+    })
+    class RootCmp {}
+
+    @Component({
+      template: 'fallback: {{ $any(errorContext.error).message }}',
+    })
+    class FallbackCmp {
+      errorContext = inject(ROUTE_ERROR);
+      constructor() {}
+    }
+
+    @Component({
+      template: `primary
+        @if (throwError()) {
+          {{ throw() }}
+        } `,
+    })
+    class PrimaryCmp {
+      throwError = signal(false);
+
+      throw() {
+        throw new Error('Error during change detection');
+      }
+
+      triggerError() {
+        this.throwError.set(true);
+      }
+    }
+
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: ErrorHandler,
+          useValue: {
+            handleError: () => {},
+            onViewError: () => {},
+          },
+        },
+        provideRouter([
+          {
+            path: 'bad',
+            component: PrimaryCmp,
+            errorComponent: FallbackCmp,
+          },
+        ]),
+      ],
+    });
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(RootCmp);
+    fixture.detectChanges();
+    await router.navigateByUrl('/bad');
+    fixture.detectChanges();
+
+    // No error initially
+    expect(fixture.nativeElement.innerHTML).toContain('primary');
+
+    // Trigger an error during CD
+    let primary!: PrimaryCmp;
+    for (const child of fixture.debugElement.children) {
+      if (child.componentInstance instanceof PrimaryCmp) {
+        primary = child.componentInstance;
+      }
+    }
+    primary.triggerError();
+
+    await fixture.whenStable();
+    expect(fixture.nativeElement.innerHTML).toContain('fallback: Error during change detection');
+  });
+});

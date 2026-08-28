@@ -13,15 +13,15 @@ import {
   NgModuleFactory,
   Provider,
   ProviderToken,
+  Resource,
   Signal,
   Type,
-  Resource,
 } from '@angular/core';
 import {Observable} from 'rxjs';
 export {DefaultExport} from '@angular/core';
 
 import type {ActivatedRouteSnapshot, RouterStateSnapshot} from './router_state';
-import {ParamMap, Params} from './shared';
+import {Params} from './shared';
 import type {UrlSegment, UrlSegmentGroup, UrlTree} from './url_tree';
 
 /**
@@ -654,6 +654,14 @@ export interface Route {
    * Can be empty if child routes specify components.
    */
   component?: Type<any>;
+
+  /**
+   * The component to instantiate as a fallback when the primary component fails to render
+   * due to an error during instantiation or change detection.
+   *
+   * @publicApi 22.2
+   */
+  errorComponent?: Type<unknown>;
 
   /**
    * An object specifying a lazy-loaded component.
