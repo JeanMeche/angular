@@ -130,6 +130,15 @@ export function ɵɵboundaryUpdate(
               const boundary = hostLView[HEADER_OFFSET + slotIndex] as LBoundary;
               boundary.error = error;
 
+              const errorHandler = hostLView[INJECTOR]?.get(ErrorHandler, null);
+              if (errorHandler) {
+                if (errorHandler.onViewError) {
+                  errorHandler.onViewError(error, details);
+                } else {
+                  errorHandler.handleError(error);
+                }
+              }
+
               // Immediately destroy the primary view
               removeLViewFromLContainer(nextContainer, viewInContainerIdx);
               destroyLView(embeddedLView![TVIEW], embeddedLView!);

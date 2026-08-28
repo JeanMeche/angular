@@ -1,3 +1,11 @@
 <h1>Welcome to the dev app!</h1>
+@boundary {
+  <app-buggy />
+} @error (let err) {
+  <div style="color: red; border: 1px solid red; padding: 10px; margin: 20px 0; border-radius: 4px;">
+    <h3>Oops! An error was caught by the boundary.</h3>
+    <p>{{ err.message }}</p>
+  </div>
+}
 
 <router-outlet />
