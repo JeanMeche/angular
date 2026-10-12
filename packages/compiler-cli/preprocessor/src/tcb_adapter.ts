@@ -31,7 +31,7 @@ import {
 
 import type {TcbTargetInput, NgpTypeCheckingConfig} from './tcb.js';
 import * as nga from './types.js';
-import {createSpan, isStaticSourceNode} from './compiler-utils.js';
+import {createForeignComponentMatcher, createSpan, isStaticSourceNode} from './compiler-utils.js';
 
 // PropertyMappingImpl is removed as we now use ClassPropertyMapping directly.
 
@@ -292,7 +292,10 @@ export function adaptTcbInput(
       )
     : [];
 
-  const binder = new R3TargetBinder<TcbDirectiveMetadata>(matcher);
+  const binder = new R3TargetBinder<TcbDirectiveMetadata>(
+    matcher,
+    createForeignComponentMatcher(target.foreignImports),
+  );
   const host = config.typeCheckHostBindings === false ? null : adaptHostElement(target, content);
   const boundTarget = binder.bind({
     template: target.templateNodes,
@@ -396,7 +399,10 @@ function adaptHostElement(target: TcbTargetInput, content?: string): TmplAstHost
   }
 
   for (const decorator of target.hostBindings) {
-    if (!isStaticSourceNode(decorator.memberName)) {
+    // ngtsc only type-checks `@HostBinding`s on property declarations; those on getters and
+    // setters are emitted but never reach the type-check block.
+    // https://github.com/angular/angular/blob/cda8962/packages/compiler-cli/src/ngtsc/annotations/directive/src/shared.ts#L681-L682
+    if (decorator.isAccessor || !isStaticSourceNode(decorator.memberName)) {
       continue;
     }
 

@@ -8,7 +8,7 @@
 
 import type * as nga from './types.js';
 import * as path from 'path';
-import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
 import {
   OutOfBandDiagnosticCategory,
   ParsedTemplate,
@@ -77,6 +77,7 @@ import {
   buildHostDirectives,
   stripIife,
   makeClassKey,
+  createForeignComponentMatcher,
 } from './compiler-utils.js';
 import {ExpressionPrinter, RawSource} from './output_ast_printer.js';
 import MagicString from 'magic-string';
@@ -203,6 +204,7 @@ export function buildTcbTargets(
         schemas: parsedSchemas,
         typeParameters: cls.typeParameters ?? null,
         pipeRegistry: buildPipeRegistry(component.resolvedDeclarations ?? []),
+        foreignImports: component.foreignImports ?? null,
       });
     } else if (directive) {
       if (directive.isJit) continue;
@@ -259,10 +261,50 @@ export async function processFile(
   rawCtx: HybridCompilerContext,
   filePath: string,
   content: string,
-  readResource?: (file: string) => string | undefined,
   metadata?: nga.AnalysisResult,
   chunkContext?: ChunkContext,
 ): Promise<ProcessedFile> {
+  const result = metadata || (await rawCtx.analyzer.getMetadataForFile(filePath));
+  if (!result) {
+    return {magicString: new MagicString(content)};
+  }
+  const fileAnalysis = getOrCreateFileAnalysis(rawCtx.fileCache, filePath);
+  if (!fileAnalysis.parsedTemplates) {
+    fileAnalysis.parsedTemplates = new Map<string, ParsedTemplate>();
+  }
+  const templatesByClass = fileAnalysis.parsedTemplates;
+  const resourceMap = new Map<string, nga.ResolvedResource | null>();
+  for (const classMeta of result.classes) {
+    if (!classMeta.component || !classMeta.className) continue;
+    const classKey = makeClassKey(classMeta.className, classMeta.span.start);
+    let parsed = templatesByClass.get(classKey);
+    if (!parsed) {
+      parsed = parseComponentTemplate(
+        classMeta.component,
+        filePath,
+        content,
+        rawCtx.templateParseOptions,
+      );
+      templatesByClass.set(classKey, parsed);
+    }
+    for (const styleUrl of parsed.styleUrls) {
+      if (!resourceMap.has(styleUrl)) {
+        const resource = await rawCtx.analyzer.readResource(filePath, styleUrl);
+        resourceMap.set(styleUrl, resource);
+      }
+    }
+  }
+  return processFileSync(rawCtx, filePath, content, resourceMap, result, chunkContext);
+}
+
+export function processFileSync(
+  rawCtx: HybridCompilerContext,
+  filePath: string,
+  content: string,
+  readResource?: ((file: string) => string | undefined) | Map<string, nga.ResolvedResource | null>,
+  metadata?: nga.AnalysisResult,
+  chunkContext?: ChunkContext,
+): ProcessedFile {
   const ctx: HybridCompilerContext & {
     remoteScopedClasses: Set<string>;
     metadataMap: Map<string, nga.AnalysisResult>;
@@ -278,7 +320,7 @@ export async function processFile(
   const printer = new ExpressionPrinter(filePath);
   const fileDiagnostics: nga.NgDiagnostic[] = [];
 
-  const result = metadata || (await ctx.analyzer.getMetadataForFile(filePath));
+  const result = metadata || ctx.analyzer.getMetadataForFileSync(filePath);
   if (!result) {
     return {magicString: s};
   }
@@ -599,24 +641,51 @@ export async function processFile(
         continue;
       }
 
+      // Stylesheets linked from the template (`<link rel="stylesheet">`) resolve from the
+      // component file, like ngtsc's `resourceLoader.resolve(styleUrl.url, containingFile)`,
+      // and through the analyzer so they see the same `rootDirs`, virtual overlay and
+      // preprocessor-extension fallback as the decorator's `styleUrls`.
+      // https://github.com/angular/angular/blob/e3ac727/packages/compiler-cli/src/ngtsc/annotations/component/src/handler.ts#L876-L923
       for (const styleUrl of parsed.styleUrls) {
-        const resolvedPath = path.resolve(path.dirname(filePath), styleUrl);
-        if (externalRuntimeStyles) {
-          externalStyles.push(resolvedPath);
+        let resource: nga.ResolvedResource | null = null;
+        if (readResource instanceof Map) {
+          resource = readResource.get(styleUrl) ?? null;
+        } else if (ctx.analyzer.readResourceSync) {
+          resource = ctx.analyzer.readResourceSync(filePath, styleUrl);
+          if (resource === null && typeof readResource === 'function') {
+            const resolvedPath = path.resolve(path.dirname(filePath), styleUrl);
+            const content = readResource(resolvedPath);
+            if (content !== undefined) {
+              resource = {resolvedPath, content};
+            }
+          }
+        } else if (typeof readResource === 'function') {
+          const resolvedPath = path.resolve(path.dirname(filePath), styleUrl);
+          const content = readResource(resolvedPath);
+          resource = content !== undefined ? {resolvedPath, content} : null;
+        } else {
+          const resolvedPath = path.resolve(path.dirname(filePath), styleUrl);
+          try {
+            const content = fsSync.readFileSync(resolvedPath, 'utf8');
+            resource = {resolvedPath, content};
+          } catch {
+            resource = null;
+          }
+        }
+
+        if (externalRuntimeStyles && resource !== null) {
+          externalStyles.push(resource.resolvedPath);
           continue;
         }
-        const resolvedContent = readResource
-          ? readResource(resolvedPath)
-          : await fs.readFile(resolvedPath, 'utf8').catch(() => undefined);
 
-        if (resolvedContent !== undefined) {
-          allStyles.push(resolvedContent);
+        if (resource?.content != null) {
+          allStyles.push(resource.content);
         } else {
           // NG2008 (COMPONENT_RESOURCE_NOT_FOUND), anchored where ngtsc anchors
           // template-sourced stylesheet failures: the template declaration node
           // (`templateUrl`'s expression for external templates, `template`'s for inline).
           // https://github.com/angular/angular/blob/e3ac727/packages/compiler-cli/src/ngtsc/annotations/component/src/resources.ts#L750-L761
-          const span = component.templateUrl?.stringLiteralSpan ?? component.templateSpan;
+          const span = component.templateUrlSpan ?? component.templateSpan;
           fileDiagnostics.push({
             category: 1,
             code: 2008,
@@ -691,8 +760,13 @@ export async function processFile(
         }
       }
 
-      // Bind template to find used directives
-      const binder = new R3TargetBinder(matcher);
+      // Bind template to find used directives. Foreign components are matched as well, like
+      // ngtsc's resolve phase does.
+      // https://github.com/angular/angular/blob/e3ac727/packages/compiler-cli/src/ngtsc/annotations/component/src/handler.ts#L1926-L1929
+      const binder = new R3TargetBinder(
+        matcher,
+        createForeignComponentMatcher(component.foreignImports),
+      );
       const bound = binder.bind({template: parsed.nodes});
 
       /** Resolves binder matches back to the declarations they were registered from. */

@@ -946,6 +946,239 @@ fn test_utf16_dts_declaration_name_span() {
 }
 
 #[test]
+fn test_dts_ng_field_directive_in_resolved_declarations() {
+    let forms_dts = r#"
+import * as i0 from '@angular/core';
+declare const ɵNgFieldDirective: unique symbol;
+export declare class FormField<T> {
+    readonly formField: i0.InputSignal<T>;
+    readonly [ɵNgFieldDirective]: true;
+    static ɵfac: i0.ɵɵFactoryDeclaration<FormField<any>, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<FormField<any>, "[formField]", never, { "formField": { "alias": "formField"; "required": true; "isSignal": true; }; }, {}, never, never, true, never>;
+}
+"#;
+    let lib_dts = r#"
+import * as i0 from '@angular/core';
+export declare class MyFieldComponent {
+    readonly value: i0.ModelSignal<string>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<MyFieldComponent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<MyFieldComponent, "my-field", never, { "value": { "alias": "value"; "required": true; "isSignal": true; }; }, { "value": "valueChange"; }, never, never, true, never>;
+}
+"#;
+
+    for optimize in [false, true] {
+        let mut virtual_files = HashMap::new();
+        virtual_files.insert(
+            "/project/tsconfig.json".to_string(),
+            r#"{"files": ["app.ts", "forms.d.ts", "lib.d.ts"]}"#.to_string(),
+        );
+        virtual_files.insert("/project/forms.d.ts".to_string(), forms_dts.to_string());
+        virtual_files.insert("/project/lib.d.ts".to_string(), lib_dts.to_string());
+        virtual_files.insert(
+            "/project/app.ts".to_string(),
+            r#"
+            import {Component} from '@angular/core';
+            import {FormField} from './forms';
+            import {MyFieldComponent} from './lib';
+
+            @Component({
+                selector: 'my-form',
+                imports: [FormField, MyFieldComponent],
+                template: '<my-field [formField]="name" />',
+            })
+            export class MyFormComponent {
+                name: any;
+            }
+            "#
+            .to_string(),
+        );
+
+        let options = AnalyzerOptions {
+            tsconfig_path: "/project/tsconfig.json".to_string(),
+            optimize: Some(optimize),
+            virtual_files: Some(virtual_files),
+            ..Default::default()
+        };
+        let analyzer = Analyzer::new(options).unwrap();
+
+        let mut results = Vec::new();
+        if optimize {
+            let iterator = analyzer.analyze_optimized().unwrap();
+            while let Ok(Some(chunk)) = futures::executor::block_on(iterator.next()) {
+                results.extend(chunk.files);
+            }
+        } else {
+            let iterator = analyzer.analyze().unwrap();
+            while futures::executor::block_on(iterator.next())
+                .unwrap()
+                .is_some()
+            {}
+            results.push(
+                analyzer
+                    .get_metadata_for_file("/project/app.ts".to_string())
+                    .expect("app.ts metadata"),
+            );
+        }
+
+        let app_meta = results
+            .iter()
+            .find(|res| res.file_path == "/project/app.ts")
+            .expect("app.ts metadata");
+        let decls = app_meta
+            .classes
+            .iter()
+            .find(|c| c.class_name.as_deref() == Some("MyFormComponent"))
+            .and_then(|c| c.component.as_ref())
+            .and_then(|c| c.resolved_declarations.as_ref())
+            .expect("MyFormComponent resolved_declarations");
+        let decl = |name: &str| {
+            decls
+                .iter()
+                .find(|d| d.name == name)
+                .unwrap_or_else(|| panic!("{name} declaration (optimize={optimize})"))
+        };
+
+        assert!(
+            decl("FormField").has_ng_field_directive,
+            "FormField from .d.ts must carry hasNgFieldDirective (optimize={optimize})"
+        );
+        assert!(
+            !decl("MyFieldComponent").has_ng_field_directive,
+            "MyFieldComponent is not a field directive (optimize={optimize})"
+        );
+    }
+}
+
+/// `exports: SHARED` with `const SHARED = [ImportedPipe, ...]` must emit a reference tuple.
+#[test]
+fn test_isolated_type_tuple_resolves_local_const_of_imported_classes() {
+    use crate::types::metadata::IsolatedTypeElementKind;
+
+    let mut virtual_files = HashMap::new();
+    virtual_files.insert(
+        "/project/tsconfig.json".to_string(),
+        r#"{"files": ["index.ts", "greet.pipe.ts", "widget.ts", "hidden.ts"]}"#.to_string(),
+    );
+    virtual_files.insert(
+        "/project/greet.pipe.ts".to_string(),
+        r#"
+        import {Pipe} from '@angular/core';
+        @Pipe({name: 'greet', standalone: false})
+        export class GreetPipe { transform(v: string) { return v; } }
+        "#
+        .to_string(),
+    );
+    virtual_files.insert(
+        "/project/widget.ts".to_string(),
+        r#"
+        import {Component} from '@angular/core';
+        @Component({selector: 'shared-widget', template: '', standalone: false})
+        export class SharedWidget {}
+        "#
+        .to_string(),
+    );
+    // `Hidden` is not exported, so `HIDDEN` falls back to the syntactic `typeof HIDDEN`.
+    virtual_files.insert(
+        "/project/hidden.ts".to_string(),
+        r#"
+        import {Pipe} from '@angular/core';
+        @Pipe({name: 'hidden', standalone: false})
+        class Hidden { transform(v: string) { return v; } }
+        export const HIDDEN = [Hidden];
+        "#
+        .to_string(),
+    );
+    let index_src = r#"
+        import {NgModule, Type} from '@angular/core';
+        import {GreetPipe} from './greet.pipe';
+        import {SharedWidget} from './widget';
+        import {HIDDEN} from './hidden';
+
+        const SHARED: Array<Type<unknown>> = [GreetPipe, SharedWidget];
+
+        @NgModule({declarations: SHARED, exports: SHARED})
+        export class SharedModule {}
+
+        @NgModule({exports: [GreetPipe, HIDDEN]})
+        export class MixedModule {}
+        "#;
+    virtual_files.insert("/project/index.ts".to_string(), index_src.to_string());
+
+    for optimize in [false, true] {
+        let options = AnalyzerOptions {
+            tsconfig_path: "/project/tsconfig.json".to_string(),
+            optimize: Some(optimize),
+            virtual_files: Some(virtual_files.clone()),
+            ..Default::default()
+        };
+        let analyzer = Analyzer::new(options).unwrap();
+        let iterator = if optimize {
+            analyzer.analyze_optimized().unwrap()
+        } else {
+            analyzer.analyze().unwrap()
+        };
+        let mut results = Vec::new();
+        while let Some(chunk) = futures::executor::block_on(iterator.next()).unwrap() {
+            results.extend(chunk.files);
+        }
+
+        let index = results
+            .iter()
+            .find(|res| res.file_path == "/project/index.ts")
+            .expect("index.ts metadata");
+        let isolated_exports = |name: &str| {
+            index
+                .classes
+                .iter()
+                .find(|c| c.class_name.as_deref() == Some(name))
+                .and_then(|c| c.ng_module.as_ref())
+                .and_then(|m| m.isolated_exports.clone())
+                .unwrap_or_else(|| panic!("{name} isolated exports (optimize={optimize})"))
+        };
+        let local_names = |refs: &Option<Vec<crate::types::metadata::ReferenceMetadata>>| {
+            refs.iter()
+                .flatten()
+                .map(|r| r.local_alias.clone().unwrap_or_default())
+                .collect::<Vec<_>>()
+        };
+
+        let shared = isolated_exports("SharedModule");
+        assert!(!shared.is_array_literal);
+        assert_eq!(shared.elements.len(), 1);
+        assert_eq!(
+            shared.elements[0].kind,
+            IsolatedTypeElementKind::ReferenceTuple,
+            "`exports: SHARED` must become a reference tuple (optimize={optimize})"
+        );
+        assert_eq!(
+            local_names(&shared.elements[0].references),
+            vec!["GreetPipe", "SharedWidget"],
+            "optimize={optimize}"
+        );
+
+        let mixed = isolated_exports("MixedModule");
+        assert!(mixed.is_array_literal);
+        assert_eq!(mixed.elements.len(), 2);
+        // Source text of a syntactic `typeof` element (ASCII source, so UTF-16 == byte offsets).
+        let span_text = |el: &crate::types::metadata::IsolatedTypeElementMetadata| {
+            let span = el.span.expect("syntactic element has a span");
+            &index_src[span.start as usize..span.end as usize]
+        };
+        // A bare import resolves to the class and is emitted through the local binding.
+        assert_eq!(mixed.elements[0].kind, IsolatedTypeElementKind::Typeof);
+        assert_eq!(
+            local_names(&mixed.elements[0].references),
+            vec!["GreetPipe"],
+            "optimize={optimize}"
+        );
+        // `Hidden` is unexported, so the reference cannot be emitted from here: syntactic form.
+        assert_eq!(mixed.elements[1].kind, IsolatedTypeElementKind::Typeof);
+        assert!(mixed.elements[1].references.is_none(), "optimize={optimize}");
+        assert_eq!(span_text(&mixed.elements[1]), "HIDDEN");
+    }
+}
+
+#[test]
 fn test_injectable_with_deps() {
     let mut virtual_files = HashMap::new();
     virtual_files.insert(
@@ -1824,6 +2057,110 @@ fn test_missing_style_resource_diagnostic_ng2008() {
     assert!(diag
         .message_text
         .contains("Could not find stylesheet file './nonexistent.css'."));
+}
+
+/// Two `rootDirs` with the generated stylesheet only under the second, as a Bazel-style build
+/// lays them out.
+fn two_root_dirs_files() -> HashMap<String, String> {
+    let mut virtual_files = HashMap::new();
+    virtual_files.insert(
+        "/project/tsconfig.json".to_string(),
+        r#"{"compilerOptions": {"rootDirs": ["./src", "./gen"]}, "files": ["src/app/my.component.ts"]}"#.to_string(),
+    );
+    virtual_files.insert(
+        "/project/src/app/my.component.ts".to_string(),
+        r#"
+            import { Component } from '@angular/core';
+
+            @Component({
+                selector: 'my-cmp',
+                templateUrl: `./my.component.html`,
+                styleUrls: [`./generated.css`],
+            })
+            export class MyComponent {}
+        "#
+        .to_string(),
+    );
+    virtual_files.insert(
+        "/project/src/app/my.component.html".to_string(),
+        r#"<link href="generated.css" rel="stylesheet"><p>hello</p>"#.to_string(),
+    );
+    virtual_files.insert(
+        "/project/gen/app/generated.css".to_string(),
+        ".generated { color: red; }".to_string(),
+    );
+    virtual_files
+}
+
+/// `read_resource` is how the TypeScript layer loads stylesheets linked from a template; it must
+/// find them wherever the decorator's `styleUrls` would, including a secondary `rootDirs` entry.
+#[test]
+fn test_read_resource_resolves_through_root_dirs() {
+    let options = AnalyzerOptions {
+        tsconfig_path: "/project/tsconfig.json".to_string(),
+        optimize: Some(true),
+        virtual_files: Some(two_root_dirs_files()),
+        ..Default::default()
+    };
+    let analyzer = Analyzer::new(options).unwrap();
+
+    let resource = analyzer
+        .read_resource(
+            "/project/src/app/my.component.ts".to_string(),
+            "generated.css".to_string(),
+        )
+        .expect("resource should resolve");
+    assert_eq!(resource.resolved_path, "/project/gen/app/generated.css");
+    assert_eq!(
+        resource.content.as_deref(),
+        Some(".generated { color: red; }")
+    );
+
+    // The decorator path lands on the same file, so the two can never disagree.
+    let meta = analyzer
+        .get_metadata_for_file("/project/src/app/my.component.ts".to_string())
+        .expect("my.component.ts metadata");
+    assert_eq!(meta.diagnostics.len(), 0);
+    let component = meta.classes[0].component.as_ref().unwrap();
+    assert_eq!(
+        component.style_urls.as_ref().unwrap()[0].resolved_path,
+        resource.resolved_path
+    );
+    assert_eq!(
+        component.styles_from_urls.as_deref(),
+        Some(&[".generated { color: red; }".to_string()][..])
+    );
+}
+
+/// A `.scss` link whose compiled `.css` sibling is what exists on disk reads the `.css`, and a
+/// URL that resolves to nothing comes back without content rather than failing outright.
+#[test]
+fn test_read_resource_preprocessor_fallback_and_missing() {
+    let mut virtual_files = two_root_dirs_files();
+    virtual_files.insert(
+        "/project/src/app/theme.css".to_string(),
+        ".theme {}".to_string(),
+    );
+    let options = AnalyzerOptions {
+        tsconfig_path: "/project/tsconfig.json".to_string(),
+        optimize: Some(true),
+        virtual_files: Some(virtual_files),
+        ..Default::default()
+    };
+    let analyzer = Analyzer::new(options).unwrap();
+    let containing_file = "/project/src/app/my.component.ts".to_string();
+
+    let fallback = analyzer
+        .read_resource(containing_file.clone(), "./theme.scss".to_string())
+        .expect("resource should resolve");
+    assert_eq!(fallback.resolved_path, "/project/src/app/theme.css");
+    assert_eq!(fallback.content.as_deref(), Some(".theme {}"));
+
+    let missing = analyzer
+        .read_resource(containing_file, "./missing.css".to_string())
+        .expect("a relative URL always has a candidate path");
+    assert_eq!(missing.resolved_path, "/project/src/app/missing.css");
+    assert_eq!(missing.content, None);
 }
 
 #[test]
@@ -2788,6 +3125,188 @@ fn test_template_url_takes_precedence_over_dynamic_template() {
     // ngtsc's parseTemplateDeclaration never inspects `template` when `templateUrl` is
     // present, so the dynamic inline template is not an error here.
     assert_eq!(meta.diagnostics.len(), 0);
+}
+
+/// The two-compilation-unit fixture from the bug report: the URL constant is only visible as a
+/// `.d.ts` initializer, the component lives in another directory, and the template sits next to
+/// the component. ngtsc evaluates `templateUrl` through the partial evaluator and resolves the
+/// result relative to the component file, so the preprocessor must too.
+fn imported_template_url_project(template_url_initializer: &str) -> HashMap<String, String> {
+    [
+        (
+            "/project/tsconfig.json",
+            r#"{"files": ["app/header.component.ts"]}"#.to_string(),
+        ),
+        (
+            "/project/lib/paths.d.ts",
+            format!(
+                "export declare const HEADER_TEMPLATE_URL = {template_url_initializer};\n\
+                 export declare const HEADER_STYLE_URLS: [\"./header.css\"];\n"
+            ),
+        ),
+        (
+            "/project/app/header.component.ts",
+            r#"
+            import { Component } from '@angular/core';
+            import { HEADER_TEMPLATE_URL, HEADER_STYLE_URLS } from '../lib/paths';
+
+            @Component({
+                selector: 'app-header',
+                templateUrl: HEADER_TEMPLATE_URL,
+                styleUrls: HEADER_STYLE_URLS,
+            })
+            export class HeaderComponent {}
+        "#
+            .to_string(),
+        ),
+        (
+            "/project/app/header_templates/default_header.html",
+            "<header>default</header>".to_string(),
+        ),
+        (
+            "/project/app/header.css",
+            "header { color: red; }".to_string(),
+        ),
+    ]
+    .into_iter()
+    .map(|(path, content)| (path.to_string(), content))
+    .collect()
+}
+
+#[test]
+fn test_template_url_from_imported_dts_constant_resolves() {
+    let analyzer = Analyzer::new(AnalyzerOptions {
+        tsconfig_path: "/project/tsconfig.json".to_string(),
+        optimize: Some(true),
+        virtual_files: Some(imported_template_url_project(
+            r#""./header_templates/default_header.html""#,
+        )),
+        ..Default::default()
+    })
+    .unwrap();
+    let meta = analyzer
+        .get_metadata_for_file("/project/app/header.component.ts".to_string())
+        .expect("header.component.ts metadata");
+    assert_eq!(meta.diagnostics, vec![], "{:?}", meta.diagnostics);
+
+    let component = meta.classes[0].component.as_ref().unwrap();
+    let template_url = component
+        .template_url
+        .as_ref()
+        .expect("templateUrl resolved");
+    assert_eq!(template_url.url, "./header_templates/default_header.html");
+    // Relative to the component's own file, not to `lib/paths.d.ts`.
+    assert_eq!(
+        template_url.resolved_path,
+        "/project/app/header_templates/default_header.html"
+    );
+    // An imported identifier is not a string literal, so there is no literal span to map
+    // template diagnostics onto.
+    assert!(template_url.string_literal_span.is_none());
+    assert_eq!(
+        component.template.as_deref(),
+        Some("<header>default</header>")
+    );
+    assert!(!component.template_dynamic);
+    assert_eq!(
+        component.styles_from_urls.as_deref(),
+        Some(&["header { color: red; }".to_string()][..])
+    );
+
+    // The template was only discovered in Stage 2, but an edit to it must still invalidate the
+    // component, so it is registered like a Stage-1 template.
+    let usages = analyzer
+        .get_ts_file_for_template("/project/app/header_templates/default_header.html".to_string())
+        .expect("template registered");
+    assert_eq!(
+        usages
+            .iter()
+            .map(|usage| usage.ts_file_path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["/project/app/header.component.ts"]
+    );
+}
+
+#[test]
+fn test_template_url_from_imported_non_string_constant_ng1010() {
+    let files = imported_template_url_project("42");
+    let analyzer = Analyzer::new(AnalyzerOptions {
+        tsconfig_path: "/project/tsconfig.json".to_string(),
+        optimize: Some(true),
+        virtual_files: Some(files.clone()),
+        ..Default::default()
+    })
+    .unwrap();
+    let meta = analyzer
+        .get_metadata_for_file("/project/app/header.component.ts".to_string())
+        .expect("header.component.ts metadata");
+    assert_eq!(meta.diagnostics.len(), 1, "{:?}", meta.diagnostics);
+    let diag = &meta.diagnostics[0];
+    assert_eq!(diag.code, 1010);
+    assert_eq!(diag.category, 1);
+    assert_eq!(diag.message_text, "templateUrl must be a string");
+    // Reported on the `templateUrl` value expression, as before.
+    let source = &files["/project/app/header.component.ts"];
+    let span = diag.span.as_ref().expect("diagnostic span");
+    assert_eq!(
+        &source[span.start as usize..span.end as usize],
+        "HEADER_TEMPLATE_URL"
+    );
+    let component = meta.classes[0].component.as_ref().unwrap();
+    assert!(component.template_url.is_none());
+}
+
+#[test]
+fn test_template_url_from_same_file_constant_resolves() {
+    let mut virtual_files = HashMap::new();
+    virtual_files.insert(
+        "/project/tsconfig.json".to_string(),
+        r#"{"files": ["app.component.ts"]}"#.to_string(),
+    );
+    virtual_files.insert(
+        "/project/app.component.ts".to_string(),
+        r#"
+            import { Component } from '@angular/core';
+
+            const DIR = './templates';
+            const TEMPLATE_URL = `${DIR}/app.component.html`;
+
+            @Component({
+                selector: 'app-root',
+                templateUrl: TEMPLATE_URL,
+                standalone: true,
+            })
+            export class AppComponent {}
+        "#
+        .to_string(),
+    );
+    virtual_files.insert(
+        "/project/templates/app.component.html".to_string(),
+        "<span>ok</span>".to_string(),
+    );
+
+    let analyzer = Analyzer::new(AnalyzerOptions {
+        tsconfig_path: "/project/tsconfig.json".to_string(),
+        optimize: Some(true),
+        virtual_files: Some(virtual_files),
+        ..Default::default()
+    })
+    .unwrap();
+    let meta = analyzer
+        .get_metadata_for_file("/project/app.component.ts".to_string())
+        .expect("app.component.ts metadata");
+    assert_eq!(meta.diagnostics, vec![], "{:?}", meta.diagnostics);
+    let component = meta.classes[0].component.as_ref().unwrap();
+    let template_url = component
+        .template_url
+        .as_ref()
+        .expect("templateUrl resolved");
+    assert_eq!(template_url.url, "./templates/app.component.html");
+    assert_eq!(
+        template_url.resolved_path,
+        "/project/templates/app.component.html"
+    );
+    assert_eq!(component.template.as_deref(), Some("<span>ok</span>"));
 }
 
 #[test]

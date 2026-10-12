@@ -30,6 +30,8 @@ export interface WasmInner {
   get_file_content?(filePath: string): string;
   getTsFileForTemplate?(templatePath: string): string | undefined;
   get_ts_file_for_template?(templatePath: string): string | undefined;
+  readResource?(containingFile: string, url: string): string | undefined;
+  read_resource?(containingFile: string, url: string): string | undefined;
   closeStream?(id: number): void;
   close_stream?(id: number): void;
 }
@@ -238,6 +240,19 @@ export class WasmAnalyzer implements IAnalyzer {
     return Promise.resolve(this.getFileContentSync(filePath));
   }
 
+  async readResource(containingFile: string, url: string): Promise<nga.ResolvedResource | null> {
+    return Promise.resolve(this.readResourceSync(containingFile, url));
+  }
+
+  readResourceSync(containingFile: string, url: string): nga.ResolvedResource | null {
+    const fn = this.inner.readResource ?? this.inner.read_resource;
+    if (!fn) {
+      throw new Error('WasmInner does not support readResource');
+    }
+    const res = fn.call(this.inner, containingFile, url);
+    return res ? (JSON.parse(res) as nga.ResolvedResource) : null;
+  }
+
   getMetadataForFileSync(filePath: string): nga.AnalysisResult | null {
     const fn = this.inner.getMetadataForFile ?? this.inner.get_metadata_for_file;
     if (!fn) {
@@ -264,5 +279,51 @@ export class WasmAnalyzer implements IAnalyzer {
     return res ? (JSON.parse(res) as nga.TemplateUsage[]) : null;
   }
 
-  close(): void {}
+  analyzeSync(): Generator<nga.CompilationChunk, void, unknown> {
+    return this.consumeStreamSync(() => this.inner.analyze());
+  }
+
+  analyzeOptimizedSync(): Generator<nga.CompilationChunk, void, unknown> {
+    return this.consumeStreamSync(() =>
+      this.startOptional(
+        this.inner.analyze_optimized ?? this.inner.analyzeOptimized,
+        'analyzeOptimized',
+      ),
+    );
+  }
+
+  private *consumeStreamSync(start: () => number): Generator<nga.CompilationChunk, void, unknown> {
+    const id = start();
+    try {
+      while (true) {
+        const eventStr = this.inner.pump();
+        if (!eventStr) {
+          throw new Error(`WASM analysis stream ${id} stalled before emitting analysisComplete`);
+        }
+        const event = JSON.parse(eventStr) as WasmEvent;
+        if (event.id !== id) {
+          continue;
+        }
+        if (event.event === 'analysisError' && event.error) {
+          throw new Error(event.error);
+        }
+        if (event.event === 'analysisComplete') {
+          return;
+        }
+        if (event.event === 'analysisResult' && event.data) {
+          yield event.data;
+        }
+      }
+    } finally {
+      this.releaseStream(id);
+    }
+  }
+
+  close(): void {
+    try {
+      this.inner.free();
+    } catch {
+      // Ignore if already freed.
+    }
+  }
 }
